@@ -1,0 +1,212 @@
+@using CashCount.Shared.Services.Auth
+@inject IAuthService AuthService
+@inject NavigationManager NavigationManager
+
+<div class="auth-container">
+    <div class="auth-card">
+        <h2>Create Account</h2>
+        <p class="auth-subtitle">Sign up to save your counts and sync across devices</p>
+
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <div class="error-message">@_errorMessage</div>
+        }
+
+        @if (_registrationSuccess)
+        {
+            <div class="success-message">
+                Account created successfully! Redirecting...
+            </div>
+        }
+        else
+        {
+            <div class="auth-form">
+                <div class="form-group">
+                    <label for="displayName">Display Name</label>
+                    <input type="text"
+                           id="displayName"
+                           @bind="_displayName"
+                           @bind:event="oninput"
+                           placeholder="Your name"
+                           disabled="@_isLoading" />
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email"
+                           id="email"
+                           @bind="_email"
+                           @bind:event="oninput"
+                           placeholder="your@email.com"
+                           disabled="@_isLoading" />
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password"
+                           id="password"
+                           @bind="_password"
+                           @bind:event="oninput"
+                           placeholder="At least 6 characters"
+                           disabled="@_isLoading" />
+                </div>
+
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm Password</label>
+                    <input type="password"
+                           id="confirmPassword"
+                           @bind="_confirmPassword"
+                           @bind:event="oninput"
+                           @onkeypress="OnKeyPress"
+                           disabled="@_isLoading" />
+                </div>
+
+                <button class="btn-primary btn-full" @onclick="SignUp" disabled="@_isLoading">
+                    @if (_isLoading)
+                    {
+                        <span>Creating account...</span>
+                    }
+                    else
+                    {
+                        <span>Create Account</span>
+                    }
+                </button>
+            </div>
+
+            <div class="auth-divider">
+                <span>or continue with</span>
+            </div>
+
+            <div class="social-buttons">
+                <button class="btn-social google" @onclick="SignInWithGoogle" disabled="@_isLoading">
+                    <span class="social-icon">G</span>
+                    <span>Google</span>
+                </button>
+                <button class="btn-social apple" @onclick="SignInWithApple" disabled="@_isLoading">
+                    <span class="social-icon"></span>
+                    <span>Apple</span>
+                </button>
+                <button class="btn-social microsoft" @onclick="SignInWithMicrosoft" disabled="@_isLoading">
+                    <span class="social-icon"></span>
+                    <span>Microsoft</span>
+                </button>
+            </div>
+        }
+
+        <div class="auth-footer">
+            <a href="/login">Already have an account? Sign in</a>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string _displayName = string.Empty;
+    private string _email = string.Empty;
+    private string _password = string.Empty;
+    private string _confirmPassword = string.Empty;
+    private string? _errorMessage;
+    private bool _isLoading = false;
+    private bool _registrationSuccess = false;
+
+    private async Task OnKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SignUp();
+        }
+    }
+
+    private async Task SignUp()
+    {
+        // Validate inputs
+        if (string.IsNullOrWhiteSpace(_displayName))
+        {
+            _errorMessage = "Please enter your name";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_email))
+        {
+            _errorMessage = "Please enter your email address";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_password))
+        {
+            _errorMessage = "Please enter a password";
+            return;
+        }
+
+        if (_password.Length < 6)
+        {
+            _errorMessage = "Password must be at least 6 characters";
+            return;
+        }
+
+        if (_password != _confirmPassword)
+        {
+            _errorMessage = "Passwords do not match";
+            return;
+        }
+
+        _isLoading = true;
+        _errorMessage = null;
+        StateHasChanged();
+
+        var result = await AuthService.SignUpWithEmailAsync(_email, _password, _displayName);
+
+        _isLoading = false;
+
+        if (result.Success)
+        {
+            _registrationSuccess = true;
+            StateHasChanged();
+
+            // Wait a moment then redirect
+            await Task.Delay(1500);
+            NavigationManager.NavigateTo("/");
+        }
+        else
+        {
+            _errorMessage = result.ErrorMessage ?? "Registration failed. Please try again.";
+            StateHasChanged();
+        }
+    }
+
+    private async Task SignInWithGoogle()
+    {
+        await SignInWithProvider(() => AuthService.SignInWithGoogleAsync());
+    }
+
+    private async Task SignInWithApple()
+    {
+        await SignInWithProvider(() => AuthService.SignInWithAppleAsync());
+    }
+
+    private async Task SignInWithMicrosoft()
+    {
+        await SignInWithProvider(() => AuthService.SignInWithMicrosoftAsync());
+    }
+
+    private async Task SignInWithProvider(Func<Task<CashCount.Shared.Models.AuthResult>> signInFunc)
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        StateHasChanged();
+
+        var result = await signInFunc();
+
+        _isLoading = false;
+
+        if (result.Success)
+        {
+            NavigationManager.NavigateTo("/");
+        }
+        else
+        {
+            _errorMessage = result.ErrorMessage;
+        }
+
+        StateHasChanged();
+    }
+}

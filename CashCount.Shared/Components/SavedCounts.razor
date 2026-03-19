@@ -1,0 +1,143 @@
+@using CashCount.Shared.Models
+@using CashCount.Shared.Services
+@inject IStorageService StorageService
+@inject IPremiumService PremiumService
+@inject NavigationManager NavigationManager
+
+<div class="saved-counts">
+    @if (!_isPremium)
+    {
+        <div class="premium-required">
+            <div class="premium-icon">🔒</div>
+            <h3>Premium Feature</h3>
+            <p>Save & Load counts is a premium feature.</p>
+            <p>Upgrade to Premium to save your cash counts and access them later.</p>
+            <a href="/" class="btn-primary">Back to Counter</a>
+        </div>
+    }
+    else if (_isLoading)
+    {
+        <div class="loading">Loading saved counts...</div>
+    }
+    else if (_savedCounts.Count == 0)
+    {
+        <div class="empty-state">
+            <div class="empty-icon">📋</div>
+            <h3>No Saved Counts</h3>
+            <p>Your saved cash counts will appear here.</p>
+            <a href="/" class="btn-primary">Start Counting</a>
+        </div>
+    }
+    else
+    {
+        <div class="saved-counts-header">
+            <span class="count-badge">@_savedCounts.Count saved</span>
+            <button class="btn-clear-all" @onclick="ConfirmClearAll">Clear All</button>
+        </div>
+
+        @if (_showConfirmClear)
+        {
+            <div class="confirm-dialog">
+                <p>Are you sure you want to delete all saved counts?</p>
+                <div class="confirm-buttons">
+                    <button class="btn-cancel" @onclick="() => _showConfirmClear = false">Cancel</button>
+                    <button class="btn-delete" @onclick="ClearAllCounts">Delete All</button>
+                </div>
+            </div>
+        }
+
+        <div class="saved-counts-list">
+            @foreach (var saved in _savedCounts)
+            {
+                <div class="saved-count-card">
+                    <div class="saved-count-header">
+                        <h3>@saved.Name</h3>
+                        <span class="saved-date">@saved.SavedAt.ToString("dd.MM.yyyy HH:mm")</span>
+                    </div>
+                    <div class="saved-count-amount">
+                        <span class="currency-symbol">@saved.CurrencySymbol</span>
+                        <span class="total-value">@saved.TotalAmount.ToString("N2")</span>
+                    </div>
+                    <div class="saved-count-details">
+                        <span class="detail-item">
+                            <span class="detail-label">Banknotes:</span>
+                            <span class="detail-value">@saved.CurrencySymbol @saved.BanknotesTotal.ToString("N2")</span>
+                        </span>
+                        <span class="detail-item">
+                            <span class="detail-label">Coins:</span>
+                            <span class="detail-value">@saved.CurrencySymbol @saved.CoinsTotal.ToString("N2")</span>
+                        </span>
+                    </div>
+
+                    @if (saved.Denominations.Any())
+                    {
+                        <details class="denomination-details">
+                            <summary>View Details (@saved.Denominations.Count items)</summary>
+                            <div class="denomination-list">
+                                @foreach (var denom in saved.Denominations)
+                                {
+                                    <span class="denom-item @(denom.IsCoin ? "coin" : "banknote")">
+                                        @denom.Quantity x @denom.DisplayName
+                                    </span>
+                                }
+                            </div>
+                        </details>
+                    }
+
+                    <div class="saved-count-actions">
+                        <button class="btn-load" @onclick="() => LoadCount(saved)">Load</button>
+                        <button class="btn-delete-single" @onclick="() => DeleteCount(saved.Id)">Delete</button>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<SavedCount> _savedCounts = new();
+    private bool _isLoading = true;
+    private bool _showConfirmClear = false;
+    private bool _isPremium = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _isPremium = await PremiumService.IsFeatureEnabledAsync(PremiumFeature.LoadCounts);
+        if (_isPremium)
+            await LoadSavedCounts();
+        else
+            _isLoading = false;
+    }
+
+    private async Task LoadSavedCounts()
+    {
+        _isLoading = true;
+        _savedCounts = await StorageService.GetSavedCountsAsync();
+        _savedCounts = _savedCounts.OrderByDescending(c => c.SavedAt).ToList();
+        _isLoading = false;
+    }
+
+    private void LoadCount(SavedCount saved)
+    {
+        // Navigate to home and pass the saved count ID as a query parameter
+        NavigationManager.NavigateTo($"/?load={saved.Id}");
+    }
+
+    private async Task DeleteCount(string id)
+    {
+        await StorageService.DeleteCountAsync(id);
+        await LoadSavedCounts();
+    }
+
+    private void ConfirmClearAll()
+    {
+        _showConfirmClear = true;
+    }
+
+    private async Task ClearAllCounts()
+    {
+        await StorageService.ClearAllAsync();
+        _showConfirmClear = false;
+        await LoadSavedCounts();
+    }
+}

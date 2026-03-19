@@ -1,0 +1,298 @@
+@using CashCount.Shared.Models
+@using CashCount.Shared.Services
+@inject IStorageService StorageService
+@inject IPremiumService PremiumService
+@inject NavigationManager NavigationManager
+
+<div class="cash-counter">
+    @if (_canSelectCurrency)
+    {
+        <div class="currency-selector">
+            <label for="currency">Currency</label>
+            <select id="currency" @onchange="OnCurrencyChanged">
+                @foreach (var currency in _currencies)
+                {
+                    <option value="@currency.Code" selected="@(_selectedCurrency?.Code == currency.Code)">
+                        @currency.Symbol @currency.Name
+                    </option>
+                }
+            </select>
+        </div>
+    }
+    else
+    {
+        <div class="currency-display">
+            <span class="currency-label">Currency:</span>
+            <span class="currency-value">@_selectedCurrency?.Symbol @_selectedCurrency?.Name</span>
+            <span class="premium-badge" title="Upgrade to Premium to change currency">Premium</span>
+        </div>
+    }
+
+    @if (_selectedCurrency != null)
+    {
+        <div class="total-display">
+            <span class="total-label">Total</span>
+            <span class="total-amount">@_selectedCurrency.Symbol @CalculateTotal().ToString("N2")</span>
+        </div>
+
+        <div class="denomination-sections">
+            <section class="denomination-section banknotes">
+                <h2>Banknotes</h2>
+                <div class="denomination-grid">
+                    @foreach (var note in _selectedCurrency.Banknotes)
+                    {
+                        <div class="denomination-card banknote">
+                            <span class="denom-name">@note.DisplayName</span>
+                            <div class="quantity-controls">
+                                <button class="btn-minus" @onclick="() => Decrement(note)" disabled="@(note.Quantity <= 0)">-</button>
+                                <input type="number" min="0" @bind="note.Quantity" @bind:event="oninput" class="quantity-input" />
+                                <button class="btn-plus" @onclick="() => Increment(note)">+</button>
+                            </div>
+                            <span class="denom-subtotal">@_selectedCurrency.Symbol @note.Total.ToString("N2")</span>
+                        </div>
+                    }
+                </div>
+                <div class="section-total">
+                    <span>Banknotes Total:</span>
+                    <strong>@_selectedCurrency.Symbol @CalculateBanknotesTotal().ToString("N2")</strong>
+                </div>
+            </section>
+
+            <section class="denomination-section coins">
+                <h2>Coins</h2>
+                <div class="denomination-grid">
+                    @foreach (var coin in _selectedCurrency.Coins)
+                    {
+                        <div class="denomination-card coin">
+                            <span class="denom-name">@coin.DisplayName</span>
+                            <div class="quantity-controls">
+                                <button class="btn-minus" @onclick="() => Decrement(coin)" disabled="@(coin.Quantity <= 0)">-</button>
+                                <input type="number" min="0" @bind="coin.Quantity" @bind:event="oninput" class="quantity-input" />
+                                <button class="btn-plus" @onclick="() => Increment(coin)">+</button>
+                            </div>
+                            <span class="denom-subtotal">@_selectedCurrency.Symbol @coin.Total.ToString("N2")</span>
+                        </div>
+                    }
+                </div>
+                <div class="section-total">
+                    <span>Coins Total:</span>
+                    <strong>@_selectedCurrency.Symbol @CalculateCoinsTotal().ToString("N2")</strong>
+                </div>
+            </section>
+        </div>
+
+        @if (_canSaveCounts)
+        {
+            <div class="save-section">
+                <div class="save-input-group">
+                    <input type="text"
+                           @bind="_saveName"
+                           @bind:event="oninput"
+                           placeholder="Enter name to save (e.g., Monday Count)"
+                           class="save-name-input" />
+                    <button class="btn-save"
+                            @onclick="SaveCurrentCount"
+                            disabled="@(CalculateTotal() == 0)">
+                        Save Count
+                    </button>
+                </div>
+                @if (_showSaveSuccess)
+                {
+                    <div class="save-success">Saved successfully!</div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="premium-feature-locked">
+                <span class="lock-icon">🔒</span>
+                <span class="lock-text">Save & Load counts</span>
+                <span class="premium-badge" title="Upgrade to Premium to save counts">Premium</span>
+            </div>
+        }
+
+        <div class="action-buttons">
+            <button class="btn-clear" @onclick="ClearAll">Clear All</button>
+        </div>
+    }
+</div>
+
+@code {
+    private List<Currency> _currencies = Currency.GetAllCurrencies();
+    private Currency? _selectedCurrency;
+    private string _saveName = string.Empty;
+    private bool _showSaveSuccess = false;
+
+    private bool _canSelectCurrency = false;
+    private bool _canSaveCounts = false;
+    private bool _canLoadCounts = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _selectedCurrency = _currencies.FirstOrDefault();
+
+        _canSelectCurrency = await PremiumService.IsFeatureEnabledAsync(PremiumFeature.CurrencySelection);
+        _canSaveCounts = await PremiumService.IsFeatureEnabledAsync(PremiumFeature.SaveCounts);
+        _canLoadCounts = await PremiumService.IsFeatureEnabledAsync(PremiumFeature.LoadCounts);
+
+        if (_canLoadCounts)
+        {
+            var uri = new Uri(NavigationManager.Uri);
+            var loadId = GetQueryParameter(uri.Query, "load");
+            if (!string.IsNullOrEmpty(loadId))
+            {
+                var savedCount = await StorageService.GetByIdAsync(loadId);
+                if (savedCount != null)
+                    LoadSavedCount(savedCount);
+            }
+        }
+    }
+
+    private static string? GetQueryParameter(string query, string key)
+    {
+        if (string.IsNullOrEmpty(query))
+            return null;
+
+        var queryString = query.TrimStart('?');
+        var pairs = queryString.Split('&');
+        foreach (var pair in pairs)
+        {
+            var parts = pair.Split('=', 2);
+            if (parts.Length == 2 && parts[0].Equals(key, StringComparison.OrdinalIgnoreCase))
+            {
+                return Uri.UnescapeDataString(parts[1]);
+            }
+        }
+        return null;
+    }
+
+    private void OnCurrencyChanged(ChangeEventArgs e)
+    {
+        var code = e.Value?.ToString();
+        _selectedCurrency = _currencies.FirstOrDefault(c => c.Code == code);
+        ClearAll();
+    }
+
+    private decimal CalculateTotal()
+    {
+        if (_selectedCurrency == null) return 0;
+        return CalculateBanknotesTotal() + CalculateCoinsTotal();
+    }
+
+    private decimal CalculateBanknotesTotal()
+    {
+        return _selectedCurrency?.Banknotes.Sum(n => n.Total) ?? 0;
+    }
+
+    private decimal CalculateCoinsTotal()
+    {
+        return _selectedCurrency?.Coins.Sum(c => c.Total) ?? 0;
+    }
+
+    private void Increment(Denomination denom)
+    {
+        denom.Quantity++;
+    }
+
+    private void Decrement(Denomination denom)
+    {
+        if (denom.Quantity > 0)
+            denom.Quantity--;
+    }
+
+    private void ClearAll()
+    {
+        if (_selectedCurrency == null) return;
+
+        foreach (var note in _selectedCurrency.Banknotes)
+            note.Quantity = 0;
+
+        foreach (var coin in _selectedCurrency.Coins)
+            coin.Quantity = 0;
+
+        _saveName = string.Empty;
+    }
+
+    private async Task SaveCurrentCount()
+    {
+        if (_selectedCurrency == null || CalculateTotal() == 0)
+            return;
+
+        var savedCount = new SavedCount
+        {
+            Name = string.IsNullOrWhiteSpace(_saveName)
+                ? $"Count {DateTime.Now:dd.MM.yyyy HH:mm}"
+                : _saveName,
+            SavedAt = DateTime.Now,
+            CurrencyCode = _selectedCurrency.Code,
+            CurrencySymbol = _selectedCurrency.Symbol,
+            TotalAmount = CalculateTotal(),
+            BanknotesTotal = CalculateBanknotesTotal(),
+            CoinsTotal = CalculateCoinsTotal(),
+            Denominations = new List<DenominationCount>()
+        };
+
+        // Save banknotes with quantities > 0
+        foreach (var note in _selectedCurrency.Banknotes.Where(n => n.Quantity > 0))
+        {
+            savedCount.Denominations.Add(new DenominationCount
+            {
+                Value = note.Value,
+                DisplayName = note.DisplayName,
+                Quantity = note.Quantity,
+                IsCoin = false
+            });
+        }
+
+        // Save coins with quantities > 0
+        foreach (var coin in _selectedCurrency.Coins.Where(c => c.Quantity > 0))
+        {
+            savedCount.Denominations.Add(new DenominationCount
+            {
+                Value = coin.Value,
+                DisplayName = coin.DisplayName,
+                Quantity = coin.Quantity,
+                IsCoin = true
+            });
+        }
+
+        await StorageService.SaveCountAsync(savedCount);
+
+        // Show success message briefly
+        _showSaveSuccess = true;
+        StateHasChanged();
+
+        await Task.Delay(2000);
+        _showSaveSuccess = false;
+        _saveName = string.Empty;
+        StateHasChanged();
+    }
+
+    // Method to load a saved count (called from SavedCounts component)
+    public void LoadSavedCount(SavedCount saved)
+    {
+        // Find and select the currency
+        _selectedCurrency = _currencies.FirstOrDefault(c => c.Code == saved.CurrencyCode);
+        if (_selectedCurrency == null) return;
+
+        // Clear all first
+        ClearAll();
+
+        // Load the saved denominations
+        foreach (var savedDenom in saved.Denominations)
+        {
+            if (savedDenom.IsCoin)
+            {
+                var coin = _selectedCurrency.Coins.FirstOrDefault(c => c.Value == savedDenom.Value);
+                if (coin != null) coin.Quantity = savedDenom.Quantity;
+            }
+            else
+            {
+                var note = _selectedCurrency.Banknotes.FirstOrDefault(n => n.Value == savedDenom.Value);
+                if (note != null) note.Quantity = savedDenom.Quantity;
+            }
+        }
+
+        StateHasChanged();
+    }
+}

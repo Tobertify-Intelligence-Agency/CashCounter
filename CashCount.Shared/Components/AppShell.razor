@@ -1,0 +1,81 @@
+@using Microsoft.AspNetCore.Components.Routing
+
+<div class="app-shell @(IsMenuOpen ? "menu-open" : "")">
+    <aside class="side-menu">
+        <div class="menu-header">
+            <h2>Tools</h2>
+            <button class="menu-close" @onclick="ToggleMenu">X</button>
+        </div>
+        <nav class="menu-nav">
+            @foreach (var tool in Tools)
+            {
+                <a href="@tool.Href"
+                   class="menu-item @(CurrentTool == tool.Id ? "active" : "")"
+                   @onclick="() => SelectTool(tool.Id)">
+                    <span class="menu-icon">@tool.Icon</span>
+                    <span class="menu-label">@tool.Name</span>
+                </a>
+            }
+        </nav>
+        <div class="menu-footer">
+            <span class="app-version">v1.0</span>
+        </div>
+    </aside>
+
+    <div class="menu-overlay" @onclick="ToggleMenu"></div>
+
+    <main class="main-content">
+        <header class="top-bar">
+            <button class="menu-toggle" @onclick="ToggleMenu" aria-label="Toggle menu">
+                <span class="hamburger-icon">&#9776;</span>
+            </button>
+            <h1 class="current-tool-name">@GetCurrentToolName()</h1>
+        </header>
+        <div class="content-area">
+            @ChildContent
+        </div>
+    </main>
+</div>
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public string CurrentTool { get; set; } = "cash-counter";
+
+    private bool IsMenuOpen { get; set; } = false;
+
+    private List<ToolItem> Tools { get; set; } = new()
+    {
+        new ToolItem { Id = "cash-counter", Name = "Cash Counter", Icon = "\U0001F4B0", Href = "/" },
+        new ToolItem { Id = "saved-counts", Name = "Saved Counts", Icon = "\U0001F4BE", Href = "/saved" },
+        new ToolItem { Id = "travel-cost", Name = "Travel Cost", Icon = "\u2708\uFE0F", Href = "/travel-cost" },
+        new ToolItem { Id = "saved-trips", Name = "Saved Trips", Icon = "\U0001F5FA\uFE0F", Href = "/saved-trips" },
+        new ToolItem { Id = "account", Name = "Account", Icon = "\U0001F464", Href = "/account" }
+    };
+
+    private void ToggleMenu()
+    {
+        IsMenuOpen = !IsMenuOpen;
+    }
+
+    private void SelectTool(string toolId)
+    {
+        CurrentTool = toolId;
+        IsMenuOpen = false;
+    }
+
+    private string GetCurrentToolName()
+    {
+        return Tools.FirstOrDefault(t => t.Id == CurrentTool)?.Name ?? "Tools";
+    }
+
+    private class ToolItem
+    {
+        public string Id { get; set; } = "";
+        public string Name { get; set; } = "";
+        public string Icon { get; set; } = "";
+        public string Href { get; set; } = "/";
+    }
+}

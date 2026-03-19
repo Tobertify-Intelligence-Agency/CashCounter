@@ -1,0 +1,138 @@
+@using CashCount.Shared.Models
+@using CashCount.Shared.Services
+@inject IStorageService StorageService
+@inject IPremiumService PremiumService
+@inject NavigationManager NavigationManager
+
+<div class="saved-counts">
+    @if (!_isPremium)
+    {
+        <div class="premium-required">
+            <div class="premium-icon">🔒</div>
+            <h3>Premium Feature</h3>
+            <p>Save & Load trips is a premium feature.</p>
+            <p>Upgrade to Premium to save your travel cost collections and access them later.</p>
+            <a href="/travel-cost" class="btn-primary">Back to Travel Cost</a>
+        </div>
+    }
+    else if (_isLoading)
+    {
+        <div class="loading">Loading saved trips...</div>
+    }
+    else if (_savedTrips.Count == 0)
+    {
+        <div class="empty-state">
+            <div class="empty-icon">✈️</div>
+            <h3>No Saved Trips</h3>
+            <p>Your saved travel cost collections will appear here.</p>
+            <a href="/travel-cost" class="btn-primary">Start Tracking</a>
+        </div>
+    }
+    else
+    {
+        <div class="saved-counts-header">
+            <span class="count-badge">@_savedTrips.Count saved</span>
+            <button class="btn-clear-all" @onclick="ConfirmClearAll">Clear All</button>
+        </div>
+
+        @if (_showConfirmClear)
+        {
+            <div class="confirm-dialog">
+                <p>Are you sure you want to delete all saved trips?</p>
+                <div class="confirm-buttons">
+                    <button class="btn-cancel" @onclick="() => _showConfirmClear = false">Cancel</button>
+                    <button class="btn-delete" @onclick="ClearAllTrips">Delete All</button>
+                </div>
+            </div>
+        }
+
+        <div class="saved-counts-list">
+            @foreach (var trip in _savedTrips)
+            {
+                <div class="saved-count-card">
+                    <div class="saved-count-header">
+                        <h3>@(string.IsNullOrWhiteSpace(trip.Name) ? "Unnamed Trip" : trip.Name)</h3>
+                        <span class="saved-date">@trip.CreatedAt.ToString("dd.MM.yyyy HH:mm")</span>
+                    </div>
+                    <div class="saved-count-details">
+                        <span class="detail-item">
+                            <span class="detail-label">Income:</span>
+                            <span class="detail-value" style="color: var(--success-color)">@trip.CurrencySymbol @trip.TotalIncome.ToString("N2")</span>
+                        </span>
+                        <span class="detail-item">
+                            <span class="detail-label">Expenses:</span>
+                            <span class="detail-value" style="color: var(--danger-color)">@trip.CurrencySymbol @trip.TotalExpenses.ToString("N2")</span>
+                        </span>
+                        <span class="detail-item">
+                            <span class="detail-label">Balance:</span>
+                            <span class="detail-value" style="color: @(trip.Balance >= 0 ? "var(--success-color)" : "var(--danger-color)")">
+                                @trip.CurrencySymbol @trip.Balance.ToString("N2")
+                            </span>
+                        </span>
+                    </div>
+                    <div class="saved-count-details">
+                        <span class="detail-item">
+                            <span class="detail-label">Entries:</span>
+                            <span class="detail-value">@trip.Entries.Count</span>
+                        </span>
+                        <span class="detail-item">
+                            <span class="detail-label">Currency:</span>
+                            <span class="detail-value">@trip.CurrencySymbol</span>
+                        </span>
+                    </div>
+                    <div class="saved-count-actions">
+                        <button class="btn-load" @onclick="() => LoadTrip(trip)">Load</button>
+                        <button class="btn-delete-single" @onclick="() => DeleteTrip(trip.Id)">Delete</button>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<TravelCollection> _savedTrips = new();
+    private bool _isLoading = true;
+    private bool _showConfirmClear = false;
+    private bool _isPremium = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _isPremium = await PremiumService.IsFeatureEnabledAsync(PremiumFeature.LoadCounts);
+        if (_isPremium)
+            await LoadSavedTrips();
+        else
+            _isLoading = false;
+    }
+
+    private async Task LoadSavedTrips()
+    {
+        _isLoading = true;
+        _savedTrips = await StorageService.GetSavedTripsAsync();
+        _savedTrips = _savedTrips.OrderByDescending(t => t.CreatedAt).ToList();
+        _isLoading = false;
+    }
+
+    private void LoadTrip(TravelCollection trip)
+    {
+        NavigationManager.NavigateTo($"/travel-cost?load={trip.Id}");
+    }
+
+    private async Task DeleteTrip(string id)
+    {
+        await StorageService.DeleteTripAsync(id);
+        await LoadSavedTrips();
+    }
+
+    private void ConfirmClearAll()
+    {
+        _showConfirmClear = true;
+    }
+
+    private async Task ClearAllTrips()
+    {
+        await StorageService.ClearAllTripsAsync();
+        _showConfirmClear = false;
+        await LoadSavedTrips();
+    }
+}

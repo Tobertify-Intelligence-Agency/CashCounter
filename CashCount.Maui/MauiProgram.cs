@@ -1,0 +1,51 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Components.Authorization;
+using CashCount.Shared.Services;
+using CashCount.Shared.Services.Auth;
+using CashCount.Shared.Services.Billing;
+using CashCount.Maui.Services.Auth;
+using CashCount.Maui.Services.Billing;
+#if ANDROID || IOS
+using Plugin.Firebase.Auth;
+#endif
+
+namespace CashCount;
+
+public static class MauiProgram
+{
+	public static MauiApp CreateMauiApp()
+	{
+		var builder = MauiApp.CreateBuilder();
+		builder
+			.UseMauiApp<App>()
+			.ConfigureFonts(fonts =>
+			{
+				fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
+			})
+			.RegisterFirebaseServices();
+
+		builder.Services.AddMauiBlazorWebView();
+
+		// Register authorization services
+		builder.Services.AddAuthorizationCore();
+		builder.Services.AddScoped<AuthenticationStateProvider, CashCountAuthStateProvider>();
+
+		// Register auth services
+		builder.Services.AddScoped<IAuthService, MauiAuthService>();
+		builder.Services.AddScoped<IUserSyncService, MauiUserSyncService>();
+        
+        // Register billing services
+        builder.Services.AddScoped<IBillingService, MauiBillingService>();
+
+		// Register other services
+		builder.Services.AddScoped<IStorageService, LocalStorageService>();
+		builder.Services.AddScoped<IPremiumService, PremiumService>();
+
+#if DEBUG
+		builder.Services.AddBlazorWebViewDeveloperTools();
+		builder.Logging.AddDebug();
+#endif
+
+		return builder.Build();
+	}
+}

@@ -1,0 +1,100 @@
+{
+  "project_info": {
+    "project_number": "40575601002",
+    "project_id": "cashcounter-1f178",
+    "storage_bucket": "cashcounter-1f178.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:40575601002:android:427aacee7241f407b7fd13",
+        "android_client_info": {
+          "package_name": "com.tobertify.cashcount"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "40575601002-kqmnt5idirpkl9n88svu2uqpus7fqq3g.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.tobertify.cashcount",
+            "certificate_hash": "a23a0095c3c39883b8fbd310953aebcf8a7c45c9"
+          }
+        },
+        {
+          "client_id": "40575601002-ldusackel8lk03v7e6du2k9jcvpb5gkh.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.tobertify.cashcount",
+            "certificate_hash": "3b88b09aedaa9902a5131cbe0a45d38def9f39d1"
+          }
+        },
+        {
+          "client_id": "40575601002-kqevtqij160cg0abmshcm451u4hhhodn.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA6rYePxKcD-ibfThs_DoAi4eRKF1rKz3k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "40575601002-kqevtqij160cg0abmshcm451u4hhhodn.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:40575601002:android:7fb04237e15c9037b7fd13",
+        "android_client_info": {
+          "package_name": "com.tobertify.cashcounter"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "40575601002-a0g4udtmtdqmm86fsrp76plgittjia1q.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.tobertify.cashcounter",
+            "certificate_hash": "4ca5b21a3e6f605529c4290a7801197005cadfd7"
+          }
+        },
+        {
+          "client_id": "40575601002-ejkkbq9216nviibbvc42locs9cddpnra.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.tobertify.cashcounter",
+            "certificate_hash": "1a276dee7b30afa82899cbf21e064a4150a5ba3b"
+          }
+        },
+        {
+          "client_id": "40575601002-kqevtqij160cg0abmshcm451u4hhhodn.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA6rYePxKcD-ibfThs_DoAi4eRKF1rKz3k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "40575601002-kqevtqij160cg0abmshcm451u4hhhodn.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

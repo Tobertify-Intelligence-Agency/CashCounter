@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cash Counter</title>
+    <base href="/" />
+    <link rel="preload" id="webassembly" />
+    <link rel="stylesheet" href="css/app.css" />
+    <link rel="stylesheet" href="_content/CashCount.Shared/cashcounter.css" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link href="CashCount.Web.styles.css" rel="stylesheet" />
+    <script type="importmap"></script>
+</head>
+
+<body>
+    <div id="app">
+        <svg class="loading-progress">
+            <circle r="40%" cx="50%" cy="50%" />
+            <circle r="40%" cx="50%" cy="50%" />
+        </svg>
+        <div class="loading-progress-text"></div>
+    </div>
+
+    <div id="blazor-error-ui">
+        An unhandled error has occurred.
+        <a href="." class="reload">Reload</a>
+        <span class="dismiss">X</span>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+    <script>
+        // TODO: Replace with your Firebase project configuration
+        // Get these values from Firebase Console > Project Settings > Your apps
+        const firebaseConfig = {
+            apiKey: "AIzaSyDSHEpC5yxstLLAUxwSoC2Z-qdTqRdkCHo",
+            authDomain: "cashcounter-1f178.firebaseapp.com",
+            projectId: "cashcounter-1f178",
+            storageBucket: "cashcounter-1f178.firebasestorage.app",
+            messagingSenderId: "40575601002",
+            appId: "1:40575601002:web:168a4435221fe4cab7fd13",
+            measurementId: "G-QV0HVY3FLG"
+        };
+
+        // Initialize Firebase
+        if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY") {
+            firebase.initializeApp(firebaseConfig);
+            console.log("Firebase initialized successfully");
+        } else {
+            console.warn("Firebase not configured. Please update firebaseConfig in index.html");
+        }
+    </script>
+    <script src="js/firebase-auth.js"></script>
+
+    <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
+</body>
+
+</html>

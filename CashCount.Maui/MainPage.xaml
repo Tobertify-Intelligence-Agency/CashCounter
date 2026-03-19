@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:local="clr-namespace:CashCount"
+             xmlns:components="clr-namespace:CashCount.Components"
+             x:Class="CashCount.MainPage"
+             NavigationPage.HasNavigationBar="False">
+
+    <Grid RowDefinitions="Auto,*">
+        <!-- Status bar spacer for Android -->
+        <BoxView x:Name="StatusBarBackground"
+                 Grid.Row="0"
+                 Color="White"
+                 HeightRequest="0" />
+
+        <BlazorWebView x:Name="blazorWebView"
+                       Grid.Row="1"
+                       HostPage="wwwroot/index.html">
+            <BlazorWebView.RootComponents>
+                <RootComponent Selector="#app" ComponentType="{x:Type components:Routes}" />
+            </BlazorWebView.RootComponents>
+        </BlazorWebView>
+    </Grid>
+
+</ContentPage>

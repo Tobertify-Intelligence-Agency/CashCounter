@@ -1,0 +1,250 @@
+@using CashCount.Shared.Models
+@using CashCount.Shared.Services
+@using CashCount.Shared.Services.Auth
+@using CashCount.Shared.Services.Billing
+@inject IAuthService AuthService
+@inject IPremiumService PremiumService
+@inject IBillingService BillingService
+@inject NavigationManager NavigationManager
+@implements IDisposable
+
+<div class="account-container">
+    @if (_isLoading)
+    {
+        <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Loading...</p>
+        </div>
+    }
+    else if (_user == null)
+    {
+        <div class="not-signed-in">
+            <div class="account-icon">👤</div>
+            <h2>Account</h2>
+            <p>Sign in to sync your data across devices and access premium features.</p>
+            <div class="auth-buttons">
+                <a href="/login" class="btn-primary">Sign In</a>
+                <a href="/register" class="btn-secondary">Create Account</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="account-card">
+            <div class="account-header">
+                @if (!string.IsNullOrEmpty(_user.PhotoUrl))
+                {
+                    <img src="@_user.PhotoUrl" alt="Profile" class="profile-photo" />
+                }
+                else
+                {
+                    <div class="profile-placeholder">
+                        @(_user.DisplayName?.FirstOrDefault().ToString().ToUpper() ?? "U")
+                    </div>
+                }
+                <div class="account-info">
+                    <h2>@_user.DisplayName</h2>
+                    <p class="account-email">@_user.Email</p>
+                    @if (!string.IsNullOrEmpty(_user.AuthProvider))
+                    {
+                        <span class="auth-provider-badge">@GetProviderName(_user.AuthProvider)</span>
+                    }
+                </div>
+            </div>
+
+            <div class="premium-section">
+                <h3>Premium Status</h3>
+
+                @if (_isPremium)
+                {
+                    <div class="premium-active">
+                        <div class="premium-badge-large">Premium Active</div>
+                        @if (_user.PremiumExpiryDate.HasValue)
+                        {
+                            <p class="expiry-date">Valid until @_user.PremiumExpiryDate.Value.ToString("MMMM dd, yyyy")</p>
+                        }
+                        <ul class="premium-features-list">
+                            <li>Currency selection (6 currencies)</li>
+                            <li>Save and load cash counts</li>
+                            <li>Sync across devices</li>
+                        </ul>
+                    </div>
+                }
+                else
+                {
+                    <div class="premium-upgrade">
+                        <h4>Upgrade to Premium</h4>
+                        <ul class="premium-features-list">
+                            <li>Currency selection (6 currencies)</li>
+                            <li>Save and load cash counts</li>
+                            <li>Sync across devices</li>
+                        </ul>
+
+                        @if (_purchaseError != null)
+                        {
+                            <div class="error-message">@_purchaseError</div>
+                        }
+
+                        @if (_billingAvailable && _products.Any())
+                        {
+                            <div class="purchase-options">
+                                @foreach (var product in _products)
+                                {
+                                    <button class="btn-upgrade"
+                                            @onclick="() => PurchaseAsync(product.ProductId)"
+                                            disabled="@_isPurchasing">
+                                        @if (_isPurchasing)
+                                        {
+                                            <span>Processing...</span>
+                                        }
+                                        else
+                                        {
+                                            <span>Upgrade for @product.FormattedPrice</span>
+                                        }
+                                    </button>
+                                }
+                                <button class="btn-restore" @onclick="RestorePurchasesAsync" disabled="@_isPurchasing">
+                                    Restore Purchases
+                                </button>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="purchase-unavailable">
+                                <p>In-app purchases are available on iOS and Android.</p>
+                                <p>Download the app to upgrade to Premium:</p>
+                                <div class="store-links">
+                                    <a href="https://apps.apple.com" class="store-badge appstore" target="_blank">App Store</a>
+                                    <a href="https://play.google.com" class="store-badge playstore" target="_blank">Google Play</a>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <div class="account-actions">
+                <button class="btn-signout" @onclick="SignOutAsync">
+                    Sign Out
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private UserProfile? _user;
+    private bool _isPremium = false;
+    private bool _billingAvailable = false;
+    private List<ProductInfo> _products = new();
+    private bool _isLoading = true;
+    private bool _isPurchasing = false;
+    private string? _purchaseError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAccountDataAsync();
+        BillingService.PurchaseCompleted += OnPurchaseCompleted;
+    }
+
+    private async Task LoadAccountDataAsync()
+    {
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            _user = await AuthService.GetCurrentUserAsync();
+            _isPremium = await PremiumService.IsPremiumAsync();
+            _billingAvailable = await BillingService.IsAvailableAsync();
+
+            if (_billingAvailable && !_isPremium)
+                _products = await BillingService.GetProductsAsync();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"LoadAccountData error: {ex.Message}");
+        }
+
+        _isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task PurchaseAsync(string productId)
+    {
+        _isPurchasing = true;
+        _purchaseError = null;
+        StateHasChanged();
+
+        var result = await BillingService.PurchaseAsync(productId);
+        _isPurchasing = false;
+
+        if (result.Success)
+        {
+            await PremiumService.SetPremiumStatusAsync(true);
+            _isPremium = true;
+        }
+        else if (result.State != PurchaseState.Cancelled)
+        {
+            _purchaseError = result.ErrorMessage;
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task RestorePurchasesAsync()
+    {
+        _isPurchasing = true;
+        _purchaseError = null;
+        StateHasChanged();
+
+        var restored = await BillingService.RestorePurchasesAsync();
+        _isPurchasing = false;
+
+        if (restored)
+        {
+            await PremiumService.SetPremiumStatusAsync(true);
+            _isPremium = true;
+        }
+        else
+        {
+            _purchaseError = "No purchases found to restore.";
+        }
+
+        StateHasChanged();
+    }
+
+    private async void OnPurchaseCompleted(object? sender, PurchaseResult result)
+    {
+        if (result.Success || result.State == PurchaseState.Restored)
+        {
+            await PremiumService.SetPremiumStatusAsync(true);
+            _isPremium = true;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task SignOutAsync()
+    {
+        await AuthService.SignOutAsync();
+        _user = null;
+        NavigationManager.NavigateTo("/");
+    }
+
+    private string GetProviderName(string provider)
+    {
+        return provider.ToLowerInvariant() switch
+        {
+            "google.com" => "Google",
+            "apple.com" => "Apple",
+            "microsoft.com" => "Microsoft",
+            "password" or "email" => "Email",
+            _ => provider
+        };
+    }
+
+    public void Dispose()
+    {
+        BillingService.PurchaseCompleted -= OnPurchaseCompleted;
+    }
+}

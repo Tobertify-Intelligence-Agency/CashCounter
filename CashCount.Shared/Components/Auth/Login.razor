@@ -1,0 +1,158 @@
+@using CashCount.Shared.Services.Auth
+@inject IAuthService AuthService
+@inject NavigationManager NavigationManager
+
+<div class="auth-container">
+    <div class="auth-card">
+        <h2>Sign In</h2>
+        <p class="auth-subtitle">Sign in to sync your data and access premium features</p>
+
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <div class="error-message">@_errorMessage</div>
+        }
+
+        <div class="auth-form">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email"
+                       id="email"
+                       @bind="_email"
+                       @bind:event="oninput"
+                       placeholder="your@email.com"
+                       disabled="@_isLoading" />
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password"
+                       id="password"
+                       @bind="_password"
+                       @bind:event="oninput"
+                       @onkeypress="OnKeyPress"
+                       disabled="@_isLoading" />
+            </div>
+
+            <button class="btn-primary btn-full" @onclick="SignInWithEmail" disabled="@_isLoading">
+                @if (_isLoading)
+                {
+                    <span>Signing in...</span>
+                }
+                else
+                {
+                    <span>Sign In</span>
+                }
+            </button>
+        </div>
+
+        <div class="auth-divider">
+            <span>or continue with</span>
+        </div>
+
+        <div class="social-buttons">
+            <button class="btn-social google" @onclick="SignInWithGoogle" disabled="@_isLoading">
+                <span class="social-icon">G</span>
+                <span>Google</span>
+            </button>
+            <button class="btn-social apple" @onclick="SignInWithApple" disabled="@_isLoading">
+                <span class="social-icon"></span>
+                <span>Apple</span>
+            </button>
+            <button class="btn-social microsoft" @onclick="SignInWithMicrosoft" disabled="@_isLoading">
+                <span class="social-icon"></span>
+                <span>Microsoft</span>
+            </button>
+        </div>
+
+        <div class="auth-footer">
+            <a href="/register">Don't have an account? Sign up</a>
+            <a href="/forgot-password">Forgot password?</a>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string _email = string.Empty;
+    private string _password = string.Empty;
+    private string? _errorMessage;
+    private bool _isLoading = false;
+
+    private async Task OnKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SignInWithEmail();
+        }
+    }
+
+    private async Task SignInWithEmail()
+    {
+        if (string.IsNullOrWhiteSpace(_email))
+        {
+            _errorMessage = "Please enter your email address";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_password))
+        {
+            _errorMessage = "Please enter your password";
+            return;
+        }
+
+        _isLoading = true;
+        _errorMessage = null;
+        StateHasChanged();
+
+        var result = await AuthService.SignInWithEmailAsync(_email, _password);
+
+        _isLoading = false;
+
+        if (result.Success)
+        {
+            NavigationManager.NavigateTo("/");
+        }
+        else
+        {
+            _errorMessage = result.ErrorMessage ?? "Sign in failed. Please try again.";
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task SignInWithGoogle()
+    {
+        await SignInWithProvider(() => AuthService.SignInWithGoogleAsync());
+    }
+
+    private async Task SignInWithApple()
+    {
+        await SignInWithProvider(() => AuthService.SignInWithAppleAsync());
+    }
+
+    private async Task SignInWithMicrosoft()
+    {
+        await SignInWithProvider(() => AuthService.SignInWithMicrosoftAsync());
+    }
+
+    private async Task SignInWithProvider(Func<Task<CashCount.Shared.Models.AuthResult>> signInFunc)
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        StateHasChanged();
+
+        var result = await signInFunc();
+
+        _isLoading = false;
+
+        if (result.Success)
+        {
+            NavigationManager.NavigateTo("/");
+        }
+        else
+        {
+            _errorMessage = result.ErrorMessage;
+        }
+
+        StateHasChanged();
+    }
+}

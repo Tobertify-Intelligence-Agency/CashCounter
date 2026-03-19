@@ -1,0 +1,324 @@
+@using CashCount.Shared.Models
+@using CashCount.Shared.Services
+@inject IStorageService StorageService
+@inject IPremiumService PremiumService
+@inject NavigationManager NavigationManager
+
+<div class="travel-cost">
+
+    @* Collection Header *@
+    <div class="tc-header-card">
+        <div class="tc-collection-name-row">
+            @if (_editingName)
+            {
+                <input class="tc-name-input"
+                       @bind="_collection.Name"
+                       @bind:event="oninput"
+                       @onblur="StopEditingName"
+                       @onkeydown="OnNameKeyDown"
+                       placeholder="Trip name..."
+                       id="tc-name-field" />
+            }
+            else
+            {
+                <h2 class="tc-collection-name" @onclick="StartEditingName">
+                    @(string.IsNullOrWhiteSpace(_collection.Name) ? "Unnamed Trip" : _collection.Name)
+                    <span class="tc-edit-hint">✏️</span>
+                </h2>
+            }
+            <div class="tc-currency-select-wrap">
+                <select class="tc-currency-select" @onchange="OnCurrencyChanged">
+                    @foreach (var (symbol, label) in _currencies)
+                    {
+                        <option value="@symbol" selected="@(_collection.CurrencySymbol == symbol)">@label</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        @* Summary bar *@
+        <div class="tc-summary">
+            <div class="tc-summary-item income">
+                <span class="tc-summary-label">Income</span>
+                <span class="tc-summary-amount">@_collection.CurrencySymbol @_collection.TotalIncome.ToString("N2")</span>
+            </div>
+            <div class="tc-summary-item expenses">
+                <span class="tc-summary-label">Expenses</span>
+                <span class="tc-summary-amount">@_collection.CurrencySymbol @_collection.TotalExpenses.ToString("N2")</span>
+            </div>
+            <div class="tc-summary-item balance @(_collection.Balance >= 0 ? "positive" : "negative")">
+                <span class="tc-summary-label">Balance</span>
+                <span class="tc-summary-amount">@_collection.CurrencySymbol @_collection.Balance.ToString("N2")</span>
+            </div>
+        </div>
+    </div>
+
+    @* Add Entry Form *@
+    <div class="tc-add-card">
+        <h3 class="tc-section-title">Add Entry</h3>
+        <div class="tc-form">
+            <div class="tc-type-toggle">
+                <button class="tc-type-btn @(_newEntry.Type == EntryType.Expense ? "active expense" : "")"
+                        @onclick='() => _newEntry.Type = EntryType.Expense'>
+                    Expense
+                </button>
+                <button class="tc-type-btn @(_newEntry.Type == EntryType.Income ? "active income" : "")"
+                        @onclick='() => _newEntry.Type = EntryType.Income'>
+                    Income
+                </button>
+            </div>
+
+            <div class="tc-form-row">
+                <input class="tc-input tc-desc-input"
+                       @bind="_newEntry.Description"
+                       @bind:event="oninput"
+                       placeholder="Description (e.g. Fuel, Hotel, Donation...)" />
+            </div>
+
+            <div class="tc-form-row tc-amount-row">
+                <div class="tc-amount-wrap">
+                    <span class="tc-currency-prefix">@_collection.CurrencySymbol</span>
+                    <input class="tc-input tc-amount-input"
+                           type="number"
+                           min="0"
+                           step="0.01"
+                           @bind="_newEntryAmountStr"
+                           @bind:event="oninput"
+                           placeholder="0.00" />
+                </div>
+
+                <input class="tc-input tc-category-input"
+                       @bind="_newEntry.Category"
+                       @bind:event="oninput"
+                       placeholder="Category (optional)" />
+
+                <input class="tc-input tc-date-input"
+                       type="date"
+                       @bind="_newEntry.Date"
+                       @bind:event="oninput" />
+            </div>
+
+            <button class="tc-btn-add @(_newEntry.Type == EntryType.Income ? "income" : "expense")"
+                    @onclick="AddEntry"
+                    disabled="@(!CanAdd)">
+                + Add @_newEntry.Type.ToString()
+            </button>
+        </div>
+    </div>
+
+    @* Entries List *@
+    @if (_collection.Entries.Count > 0)
+    {
+        <div class="tc-entries-card">
+            <div class="tc-entries-header">
+                <h3 class="tc-section-title">Entries (@_collection.Entries.Count)</h3>
+                <div class="tc-filter-row">
+                    <button class="tc-filter-btn @(_filter == null ? "active" : "")" @onclick='() => _filter = null'>All</button>
+                    <button class="tc-filter-btn income @(_filter == EntryType.Income ? "active" : "")" @onclick='() => _filter = EntryType.Income'>Income</button>
+                    <button class="tc-filter-btn expense @(_filter == EntryType.Expense ? "active" : "")" @onclick='() => _filter = EntryType.Expense'>Expenses</button>
+                </div>
+            </div>
+
+            <div class="tc-entries-list">
+                @foreach (var entry in FilteredEntries)
+                {
+                    <div class="tc-entry @(entry.Type == EntryType.Income ? "income" : "expense")">
+                        <div class="tc-entry-type-bar"></div>
+                        <div class="tc-entry-body">
+                            <div class="tc-entry-top">
+                                <span class="tc-entry-desc">@entry.Description</span>
+                                <span class="tc-entry-amount @(entry.Type == EntryType.Income ? "income" : "expense")">
+                                    @(entry.Type == EntryType.Income ? "+" : "-")@_collection.CurrencySymbol @entry.Amount.ToString("N2")
+                                </span>
+                            </div>
+                            <div class="tc-entry-bottom">
+                                <span class="tc-entry-meta">
+                                    @if (!string.IsNullOrWhiteSpace(entry.Category))
+                                    {
+                                        <span class="tc-entry-category">@entry.Category</span>
+                                    }
+                                    <span class="tc-entry-date">@entry.Date.ToString("dd.MM.yyyy")</span>
+                                </span>
+                                <button class="tc-btn-delete" @onclick="() => DeleteEntry(entry.Id)" title="Delete entry">✕</button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="tc-empty-state">
+            <span class="tc-empty-icon">✈️</span>
+            <p>No entries yet. Add your first income or expense above.</p>
+        </div>
+    }
+
+    @* Save Section *@
+    @if (_canSave)
+    {
+        <div class="save-section">
+            <div class="save-input-group">
+                <input type="text"
+                       @bind="_saveName"
+                       @bind:event="oninput"
+                       placeholder="Trip name to save (e.g. Italy 2026)"
+                       class="save-name-input" />
+                <button class="btn-save"
+                        @onclick="SaveCurrentTrip"
+                        disabled="@(_collection.Entries.Count == 0)">
+                    Save Trip
+                </button>
+            </div>
+            @if (_showSaveSuccess)
+            {
+                <div class="save-success">Saved successfully!</div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="premium-feature-locked">
+            <span class="lock-icon">🔒</span>
+            <span class="lock-text">Save & Load trips</span>
+            <span class="premium-badge" title="Upgrade to Premium to save trips">Premium</span>
+        </div>
+    }
+
+    @if (_collection.Entries.Count > 0)
+    {
+        <div class="tc-action-buttons">
+            <button class="btn-clear" @onclick="ClearAll">Clear All</button>
+        </div>
+    }
+</div>
+
+@code {
+    private TravelCollection _collection = new();
+    private TravelCostEntry _newEntry = new();
+    private string _newEntryAmountStr = string.Empty;
+    private bool _editingName = false;
+    private EntryType? _filter = null;
+    private bool _canSave = false;
+    private string _saveName = string.Empty;
+    private bool _showSaveSuccess = false;
+
+    private static readonly List<(string Symbol, string Label)> _currencies = new()
+    {
+        ("€", "€ EUR"),
+        ("$", "$ USD"),
+        ("£", "£ GBP"),
+        ("CHF", "CHF"),
+        ("CA$", "CA$ CAD"),
+        ("A$", "A$ AUD"),
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        _canSave = await PremiumService.IsFeatureEnabledAsync(PremiumFeature.SaveCounts);
+
+        var canLoad = await PremiumService.IsFeatureEnabledAsync(PremiumFeature.LoadCounts);
+        if (canLoad)
+        {
+            var uri = new Uri(NavigationManager.Uri);
+            var loadId = GetQueryParameter(uri.Query, "load");
+            if (!string.IsNullOrEmpty(loadId))
+            {
+                var savedTrip = await StorageService.GetTripByIdAsync(loadId);
+                if (savedTrip != null)
+                    _collection = savedTrip;
+            }
+        }
+    }
+
+    private static string? GetQueryParameter(string query, string key)
+    {
+        if (string.IsNullOrEmpty(query)) return null;
+        var pairs = query.TrimStart('?').Split('&');
+        foreach (var pair in pairs)
+        {
+            var parts = pair.Split('=', 2);
+            if (parts.Length == 2 && parts[0].Equals(key, StringComparison.OrdinalIgnoreCase))
+                return Uri.UnescapeDataString(parts[1]);
+        }
+        return null;
+    }
+
+    private async Task SaveCurrentTrip()
+    {
+        if (_collection.Entries.Count == 0) return;
+
+        if (!string.IsNullOrWhiteSpace(_saveName))
+            _collection.Name = _saveName;
+        else if (string.IsNullOrWhiteSpace(_collection.Name))
+            _collection.Name = $"Trip {DateTime.Now:dd.MM.yyyy HH:mm}";
+
+        await StorageService.SaveTripAsync(_collection);
+
+        _showSaveSuccess = true;
+        StateHasChanged();
+        await Task.Delay(2000);
+        _showSaveSuccess = false;
+        _saveName = string.Empty;
+        StateHasChanged();
+    }
+
+    private bool CanAdd =>
+        !string.IsNullOrWhiteSpace(_newEntry.Description) &&
+        decimal.TryParse(_newEntryAmountStr, System.Globalization.NumberStyles.Any,
+            System.Globalization.CultureInfo.InvariantCulture, out var v) && v > 0;
+
+    private IEnumerable<TravelCostEntry> FilteredEntries =>
+        _filter == null
+            ? _collection.Entries.OrderByDescending(e => e.Date)
+            : _collection.Entries.Where(e => e.Type == _filter).OrderByDescending(e => e.Date);
+
+    private void AddEntry()
+    {
+        if (!decimal.TryParse(_newEntryAmountStr, System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out var amount) || amount <= 0)
+            return;
+
+        _newEntry.Amount = amount;
+        _collection.Entries.Add(_newEntry);
+
+        // Reset form, keep type and date for convenience
+        var nextType = _newEntry.Type;
+        var nextDate = _newEntry.Date;
+        _newEntry = new TravelCostEntry { Type = nextType, Date = nextDate };
+        _newEntryAmountStr = string.Empty;
+    }
+
+    private void DeleteEntry(string id)
+    {
+        _collection.Entries.RemoveAll(e => e.Id == id);
+    }
+
+    private void ClearAll()
+    {
+        _collection.Entries.Clear();
+        _filter = null;
+    }
+
+    private void OnCurrencyChanged(ChangeEventArgs e)
+    {
+        _collection.CurrencySymbol = e.Value?.ToString() ?? "€";
+    }
+
+    private void StartEditingName()
+    {
+        _editingName = true;
+    }
+
+    private void StopEditingName()
+    {
+        _editingName = false;
+    }
+
+    private void OnNameKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" || e.Key == "Escape")
+            StopEditingName();
+    }
+}
