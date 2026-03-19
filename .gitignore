@@ -420,3 +420,9 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# JetBrains / Rider / IntelliJ local project files
+.idea/
+
+# Claude local machine settings
+.claude/settings.local.json
