@@ -1,0 +1,423 @@
+@using System.Globalization
+@using CashCount.Shared.Models
+@using CashCount.Shared.Services
+@inject IStorageService StorageService
+
+<div class="account-funds">
+    <div class="af-header-card">
+        <div>
+            <p class="af-eyebrow">Account & fund tracker</p>
+            <h2>@_ledger.Name</h2>
+            <p class="af-subtitle">Track balances across multiple pots, log incoming and outgoing transactions, and keep a lightweight dashboard in sync automatically.</p>
+        </div>
+
+        <div class="af-header-actions">
+            <select class="af-select af-currency-select" @onchange="OnCurrencyChanged">
+                @foreach (var currency in _currencies)
+                {
+                    <option value="@currency.Symbol" selected="@(_ledger.CurrencySymbol == currency.Symbol)">@currency.Label</option>
+                }
+            </select>
+            <button class="btn-clear" @onclick="ResetLedger" disabled="@(!_ledger.Accounts.Any() && !_ledger.Transactions.Any())">Reset tracker</button>
+        </div>
+    </div>
+
+    <div class="af-dashboard-grid">
+        <div class="af-stat-card primary">
+            <span class="af-stat-label">Total balance</span>
+            <strong>@FormatAmount(_ledger.TotalBalance)</strong>
+            <small>@_ledger.Accounts.Count account(s)</small>
+        </div>
+        <div class="af-stat-card success">
+            <span class="af-stat-label">Incoming</span>
+            <strong>@FormatAmount(_ledger.TotalIncoming)</strong>
+            <small>@_ledger.Transactions.Count(t => t.Direction == CashFlowDirection.Incoming) transaction(s)</small>
+        </div>
+        <div class="af-stat-card warning">
+            <span class="af-stat-label">Outgoing</span>
+            <strong>@FormatAmount(_ledger.TotalOutgoing)</strong>
+            <small>@_ledger.Transactions.Count(t => t.Direction == CashFlowDirection.Outgoing) transaction(s)</small>
+        </div>
+        <div class="af-stat-card neutral">
+            <span class="af-stat-label">Net flow</span>
+            <strong class="@(_ledger.NetFlow >= 0 ? "positive" : "negative")">@FormatSignedAmount(_ledger.NetFlow)</strong>
+            <small>Opening balance @FormatAmount(_ledger.TotalOpeningBalance)</small>
+        </div>
+    </div>
+
+    <div class="af-content-grid">
+        <section class="af-panel">
+            <div class="af-panel-header">
+                <div>
+                    <h3>Accounts & funds</h3>
+                    <p>Add each cash account, bank pot, savings bucket, or fund once.</p>
+                </div>
+                <span class="count-badge">@_ledger.Accounts.Count total</span>
+            </div>
+
+            <div class="af-form-grid compact">
+                <input class="tc-input" @bind="_newAccount.Name" @bind:event="oninput" placeholder="Account name" />
+                <select class="af-select" @bind="_newAccount.Kind">
+                    @foreach (var kind in Enum.GetValues<AccountKind>())
+                    {
+                        <option value="@kind">@kind</option>
+                    }
+                </select>
+                <input class="tc-input" type="number" min="0" step="0.01" @bind="_newAccountOpeningBalance" @bind:event="oninput" placeholder="Opening balance" />
+                <input class="tc-input" @bind="_newAccount.Notes" @bind:event="oninput" placeholder="Optional note" />
+            </div>
+
+            <button class="btn-save af-add-btn" @onclick="AddAccount" disabled="@(!CanAddAccount)">+ Add account</button>
+
+            @if (_ledger.Accounts.Any())
+            {
+                <div class="af-account-list">
+                    @foreach (var account in _ledger.Accounts.OrderBy(a => a.Name))
+                    {
+                        var balance = _ledger.GetAccountBalance(account.Id);
+                        <div class="af-account-card">
+                            <div class="af-account-main">
+                                <div>
+                                    <div class="af-account-title-row">
+                                        <strong>@account.Name</strong>
+                                        <span class="af-kind-badge">@account.Kind</span>
+                                    </div>
+                                    @if (!string.IsNullOrWhiteSpace(account.Notes))
+                                    {
+                                        <p class="af-account-note">@account.Notes</p>
+                                    }
+                                </div>
+                                <div class="af-account-balance @(balance >= 0 ? "positive" : "negative")">@FormatAmount(balance)</div>
+                            </div>
+                            <div class="af-account-meta">
+                                <span>Opening @FormatAmount(account.OpeningBalance)</span>
+                                <span>@_ledger.GetTransactionCount(account.Id) tx</span>
+                            </div>
+                            <div class="af-account-actions">
+                                <button class="btn-delete-single" @onclick="() => DeleteAccount(account.Id)">Delete</button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="tc-empty-state af-inline-empty">
+                    <span class="tc-empty-icon">🏦</span>
+                    <p>No accounts yet. Start with the cash box, main bank account, or a fund bucket.</p>
+                </div>
+            }
+        </section>
+
+        <section class="af-panel">
+            <div class="af-panel-header">
+                <div>
+                    <h3>Log a transaction</h3>
+                    <p>Attach every incoming or outgoing movement to one account.</p>
+                </div>
+                <span class="count-badge">Auto-saved</span>
+            </div>
+
+            @if (_ledger.Accounts.Any())
+            {
+                <div class="tc-type-toggle">
+                    <button class="tc-type-btn @(_newTransaction.Direction == CashFlowDirection.Outgoing ? "active expense" : "")"
+                            @onclick='() => _newTransaction.Direction = CashFlowDirection.Outgoing'>Outgoing</button>
+                    <button class="tc-type-btn @(_newTransaction.Direction == CashFlowDirection.Incoming ? "active income" : "")"
+                            @onclick='() => _newTransaction.Direction = CashFlowDirection.Incoming'>Incoming</button>
+                </div>
+
+                <div class="af-form-grid">
+                    <select class="af-select" @bind="_newTransaction.AccountId">
+                        @foreach (var account in _ledger.Accounts.OrderBy(a => a.Name))
+                        {
+                            <option value="@account.Id">@account.Name</option>
+                        }
+                    </select>
+                    <input class="tc-input" @bind="_newTransaction.Description" @bind:event="oninput" placeholder="Description" />
+                    <input class="tc-input" type="number" min="0" step="0.01" @bind="_newTransactionAmount" @bind:event="oninput" placeholder="Amount" />
+                    <input class="tc-input" list="transaction-categories" @bind="_newTransaction.Category" @bind:event="oninput" placeholder="Category" />
+                    <input class="tc-input" type="date" @bind="_newTransaction.Date" @bind:event="oninput" />
+                    <input class="tc-input" @bind="_newTransaction.Notes" @bind:event="oninput" placeholder="Optional note" />
+                </div>
+
+                <datalist id="transaction-categories">
+                    @foreach (var category in SuggestedCategories)
+                    {
+                        <option value="@category"></option>
+                    }
+                </datalist>
+
+                <button class="tc-btn-add @(_newTransaction.Direction == CashFlowDirection.Incoming ? "income" : "expense")"
+                        @onclick="AddTransaction"
+                        disabled="@(!CanAddTransaction)">
+                    + Add @(_newTransaction.Direction == CashFlowDirection.Incoming ? "incoming" : "outgoing")
+                </button>
+            }
+            else
+            {
+                <div class="tc-empty-state af-inline-empty">
+                    <span class="tc-empty-icon">🧾</span>
+                    <p>Create an account first, then transactions can be assigned to it.</p>
+                </div>
+            }
+        </section>
+    </div>
+
+    <div class="af-content-grid bottom">
+        <section class="af-panel">
+            <div class="af-panel-header">
+                <div>
+                    <h3>Category overview</h3>
+                    <p>Quick read on where money comes from and where it goes.</p>
+                </div>
+            </div>
+
+            @if (CategorySummaries.Any())
+            {
+                <div class="af-category-list">
+                    @foreach (var category in CategorySummaries.Take(8))
+                    {
+                        <div class="af-category-item">
+                            <div>
+                                <strong>@category.Category</strong>
+                                <div class="af-category-meta">
+                                    <span class="positive">In @FormatAmount(category.Incoming)</span>
+                                    <span class="negative">Out @FormatAmount(category.Outgoing)</span>
+                                </div>
+                            </div>
+                            <div class="af-category-net @(category.Net >= 0 ? "positive" : "negative")">@FormatSignedAmount(category.Net)</div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="tc-empty-state af-inline-empty">
+                    <span class="tc-empty-icon">📊</span>
+                    <p>Categories appear once transactions start using them.</p>
+                </div>
+            }
+        </section>
+
+        <section class="af-panel">
+            <div class="af-panel-header">
+                <div>
+                    <h3>Recent transactions</h3>
+                    <p>Latest movements across all tracked accounts.</p>
+                </div>
+                <span class="count-badge">@_ledger.Transactions.Count total</span>
+            </div>
+
+            @if (_ledger.Transactions.Any())
+            {
+                <div class="af-transaction-list">
+                    @foreach (var transaction in RecentTransactions)
+                    {
+                        var accountName = _ledger.Accounts.FirstOrDefault(a => a.Id == transaction.AccountId)?.Name ?? "Unknown account";
+                        <div class="tc-entry @(transaction.Direction == CashFlowDirection.Incoming ? "income" : "expense")">
+                            <div class="tc-entry-type-bar"></div>
+                            <div class="tc-entry-body">
+                                <div class="tc-entry-top">
+                                    <div>
+                                        <span class="tc-entry-desc">@transaction.Description</span>
+                                        <div class="af-transaction-account">@accountName</div>
+                                    </div>
+                                    <span class="tc-entry-amount @(transaction.Direction == CashFlowDirection.Incoming ? "income" : "expense")">
+                                        @(transaction.Direction == CashFlowDirection.Incoming ? "+" : "-")@FormatAmount(transaction.Amount, includeCurrency: false)
+                                    </span>
+                                </div>
+                                <div class="tc-entry-bottom">
+                                    <span class="tc-entry-meta">
+                                        @if (!string.IsNullOrWhiteSpace(transaction.Category))
+                                        {
+                                            <span class="tc-entry-category">@transaction.Category</span>
+                                        }
+                                        <span class="tc-entry-date">@transaction.Date.ToString("dd.MM.yyyy")</span>
+                                    </span>
+                                    <button class="tc-btn-delete" @onclick="() => DeleteTransaction(transaction.Id)">✕</button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="tc-empty-state af-inline-empty">
+                    <span class="tc-empty-icon">💸</span>
+                    <p>No transactions yet.</p>
+                </div>
+            }
+        </section>
+    </div>
+</div>
+
+@code {
+    private AccountLedger _ledger = new();
+    private TrackedAccount _newAccount = new();
+    private string _newAccountOpeningBalance = string.Empty;
+    private AccountTransaction _newTransaction = new();
+    private string _newTransactionAmount = string.Empty;
+
+    private static readonly List<(string Symbol, string Label)> _currencies = new()
+    {
+        ("€", "€ EUR"),
+        ("$", "$ USD"),
+        ("£", "£ GBP"),
+        ("CHF", "CHF"),
+        ("CA$", "CA$ CAD"),
+        ("A$", "A$ AUD")
+    };
+
+    private static readonly string[] _defaultCategories =
+    {
+        "Salary", "Sales", "Top-up", "Cash Deposit", "Rent", "Groceries", "Transport", "Fuel",
+        "Eating Out", "Supplies", "Fees", "Savings", "Investment", "Emergency", "Travel", "Misc"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        _ledger = await StorageService.GetAccountLedgerAsync();
+
+        if (!_ledger.Accounts.Any() && !_ledger.Transactions.Any())
+        {
+            _ledger.Name = "Accounts Overview";
+        }
+
+        PrepareNewTransaction();
+    }
+
+    private IEnumerable<AccountTransaction> RecentTransactions => _ledger.Transactions
+        .OrderByDescending(t => t.Date)
+        .ThenByDescending(t => t.Id)
+        .Take(12);
+
+    private IEnumerable<CategorySummary> CategorySummaries => _ledger.GetCategorySummaries();
+
+    private IEnumerable<string> SuggestedCategories => _defaultCategories
+        .Concat(_ledger.Transactions.Where(t => !string.IsNullOrWhiteSpace(t.Category)).Select(t => t.Category.Trim()))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderBy(category => category);
+
+    private bool CanAddAccount =>
+        !string.IsNullOrWhiteSpace(_newAccount.Name) &&
+        decimal.TryParse(_newAccountOpeningBalance, NumberStyles.Any, CultureInfo.InvariantCulture, out _);
+
+    private bool CanAddTransaction =>
+        !string.IsNullOrWhiteSpace(_newTransaction.AccountId) &&
+        !string.IsNullOrWhiteSpace(_newTransaction.Description) &&
+        decimal.TryParse(_newTransactionAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var amount) &&
+        amount > 0;
+
+    private async Task AddAccount()
+    {
+        if (!CanAddAccount)
+            return;
+
+        if (!decimal.TryParse(_newAccountOpeningBalance, NumberStyles.Any, CultureInfo.InvariantCulture, out var openingBalance))
+            return;
+
+        _newAccount.OpeningBalance = openingBalance;
+        _ledger.Accounts.Add(_newAccount);
+
+        _newAccount = new TrackedAccount();
+        _newAccountOpeningBalance = string.Empty;
+
+        PrepareNewTransaction();
+        await PersistLedger();
+    }
+
+    private async Task AddTransaction()
+    {
+        if (!CanAddTransaction)
+            return;
+
+        if (!decimal.TryParse(_newTransactionAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var amount))
+            return;
+
+        _newTransaction.Amount = amount;
+        _ledger.Transactions.Add(_newTransaction);
+
+        var direction = _newTransaction.Direction;
+        var date = _newTransaction.Date;
+        var accountId = _newTransaction.AccountId;
+        _newTransaction = new AccountTransaction
+        {
+            Direction = direction,
+            Date = date,
+            AccountId = accountId
+        };
+        _newTransactionAmount = string.Empty;
+
+        await PersistLedger();
+    }
+
+    private async Task DeleteAccount(string accountId)
+    {
+        _ledger.Accounts.RemoveAll(account => account.Id == accountId);
+        _ledger.Transactions.RemoveAll(transaction => transaction.AccountId == accountId);
+        PrepareNewTransaction();
+        await PersistLedger();
+    }
+
+    private async Task DeleteTransaction(string transactionId)
+    {
+        _ledger.Transactions.RemoveAll(transaction => transaction.Id == transactionId);
+        await PersistLedger();
+    }
+
+    private async Task ResetLedger()
+    {
+        _ledger = new AccountLedger
+        {
+            CurrencySymbol = _ledger.CurrencySymbol
+        };
+        _newAccount = new TrackedAccount();
+        _newAccountOpeningBalance = string.Empty;
+        _newTransactionAmount = string.Empty;
+        PrepareNewTransaction();
+        await StorageService.ClearAccountLedgerAsync();
+    }
+
+    private async Task OnCurrencyChanged(ChangeEventArgs args)
+    {
+        _ledger.CurrencySymbol = args.Value?.ToString() ?? "€";
+        await PersistLedger();
+    }
+
+    private void PrepareNewTransaction()
+    {
+        var selectedAccountId = _newTransaction.AccountId;
+        var firstAccountId = _ledger.Accounts.FirstOrDefault()?.Id ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(selectedAccountId) || !_ledger.Accounts.Any(a => a.Id == selectedAccountId))
+        {
+            selectedAccountId = firstAccountId;
+        }
+
+        _newTransaction = new AccountTransaction
+        {
+            AccountId = selectedAccountId,
+            Date = DateTime.Today,
+            Direction = _newTransaction.Direction
+        };
+    }
+
+    private async Task PersistLedger()
+    {
+        await StorageService.SaveAccountLedgerAsync(_ledger);
+    }
+
+    private string FormatAmount(decimal amount, bool includeCurrency = true)
+    {
+        var number = amount.ToString("N2", CultureInfo.InvariantCulture);
+        return includeCurrency ? $"{_ledger.CurrencySymbol} {number}" : number;
+    }
+
+    private string FormatSignedAmount(decimal amount)
+    {
+        var prefix = amount >= 0 ? "+" : "-";
+        return $"{prefix}{_ledger.CurrencySymbol} {Math.Abs(amount).ToString("N2", CultureInfo.InvariantCulture)}";
+    }
+}

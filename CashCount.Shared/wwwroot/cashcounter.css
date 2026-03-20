@@ -1998,6 +1998,7 @@
     font-size: 2.5rem;
     display: block;
     margin-bottom: 0.5rem;
+
 }
 
 /* Action buttons */
@@ -2030,5 +2031,302 @@
     .tc-btn-add {
         width: 100%;
         text-align: center;
+    }
+}
+
+/* ============================================================
+   Account / Fund Tracker MVP
+   ============================================================ */
+
+.account-funds {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.af-header-card,
+.af-panel {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 1.25rem 1.5rem;
+}
+
+.af-header-card {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+.af-eyebrow {
+    margin: 0 0 0.35rem 0;
+    color: var(--primary-color);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.af-header-card h2 {
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.af-subtitle {
+    margin: 0.5rem 0 0 0;
+    color: var(--text-secondary);
+    max-width: 720px;
+}
+
+.af-header-actions {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.af-select {
+    padding: 0.65rem 0.9rem;
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: white;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+}
+
+.af-currency-select {
+    min-width: 120px;
+}
+
+.af-dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.af-stat-card {
+    border-radius: var(--radius);
+    padding: 1rem 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    border: 1px solid var(--border-color);
+}
+
+.af-stat-card strong {
+    font-size: 1.35rem;
+    color: var(--text-primary);
+}
+
+.af-stat-card small,
+.af-stat-label {
+    color: var(--text-secondary);
+}
+
+.af-stat-label {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+}
+
+.af-stat-card.primary { background: #eff6ff; }
+.af-stat-card.success { background: #f0fdf4; }
+.af-stat-card.warning { background: #fff7ed; }
+.af-stat-card.neutral { background: #f8fafc; }
+
+.positive { color: #16a34a; }
+.negative { color: #dc2626; }
+
+.af-content-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 1rem;
+}
+
+.af-content-grid.bottom {
+    align-items: start;
+}
+
+.af-panel-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.af-panel-header h3 {
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.af-panel-header p {
+    margin: 0.35rem 0 0 0;
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+}
+
+.af-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 0.85rem;
+}
+
+.af-form-grid.compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.af-add-btn {
+    margin-bottom: 1rem;
+}
+
+.af-account-list,
+.af-transaction-list,
+.af-category-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.af-account-card {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 1rem;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.af-account-main {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    align-items: flex-start;
+}
+
+.af-account-title-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.af-kind-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    background: #e2e8f0;
+    color: var(--text-secondary);
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.af-account-note {
+    margin: 0.35rem 0 0 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.af-account-balance {
+    font-size: 1.15rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.af-account-meta {
+    display: flex;
+    gap: 0.9rem;
+    flex-wrap: wrap;
+    margin-top: 0.75rem;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+.af-account-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0.75rem;
+}
+
+.af-inline-empty {
+    padding: 1.5rem 1rem;
+    background: var(--background);
+    border-radius: var(--radius-sm);
+}
+
+.af-category-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: #fff;
+}
+
+.af-category-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: 0.3rem;
+    font-size: 0.85rem;
+}
+
+.af-category-net {
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.af-transaction-account {
+    margin-top: 0.2rem;
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+}
+
+@media (max-width: 900px) {
+    .af-dashboard-grid,
+    .af-content-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 700px) {
+    .account-funds {
+        padding: 0.5rem;
+    }
+
+    .af-dashboard-grid,
+    .af-content-grid,
+    .af-form-grid,
+    .af-form-grid.compact {
+        grid-template-columns: 1fr;
+    }
+
+    .af-header-card,
+    .af-panel {
+        padding: 1rem;
+    }
+
+    .af-header-actions,
+    .af-account-main,
+    .af-panel-header,
+    .af-category-item,
+    .tc-entry-top,
+    .tc-entry-bottom {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .af-account-balance,
+    .af-category-net,
+    .tc-entry-amount {
+        white-space: normal;
     }
 }
