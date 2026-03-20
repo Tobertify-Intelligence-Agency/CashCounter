@@ -9,6 +9,11 @@ Cross-platform cash counting app built with .NET MAUI Blazor Hybrid and Blazor W
 - `CashCount.Shared/` — shared UI, models, and services
 - `CashCount.sln` — solution file
 
+## Prerequisites
+
+- .NET 10 SDK
+- MAUI workloads for mobile/desktop builds
+
 ## Run
 
 ### Web
@@ -25,6 +30,19 @@ dotnet run --project CashCount.Maui -f net10.0-windows10.0.19041.0
 ```bash
 dotnet build CashCount.sln
 ```
+
+### Android release signing
+
+Android release builds read signing settings from environment variables instead of the project file:
+
+```bash
+export CASHCOUNT_ANDROID_KEYSTORE=/absolute/path/to/cashcount.keystore
+export CASHCOUNT_ANDROID_KEY_ALIAS=your-key-alias
+export CASHCOUNT_ANDROID_KEY_PASS=your-key-password
+export CASHCOUNT_ANDROID_STORE_PASS=your-store-password
+```
+
+Release Android builds fail fast if any of these variables are missing.
 
 ## Notes
 

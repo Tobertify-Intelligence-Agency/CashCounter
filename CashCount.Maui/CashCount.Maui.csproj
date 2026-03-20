@@ -23,15 +23,21 @@
         <ApplicationVersion>6</ApplicationVersion>
 
         <WindowsPackageType>None</WindowsPackageType>
+
+        <!-- Android release signing comes from environment variables. -->
+        <CashCountAndroidKeyStore>$([System.Environment]::GetEnvironmentVariable('CASHCOUNT_ANDROID_KEYSTORE'))</CashCountAndroidKeyStore>
+        <CashCountAndroidKeyAlias>$([System.Environment]::GetEnvironmentVariable('CASHCOUNT_ANDROID_KEY_ALIAS'))</CashCountAndroidKeyAlias>
+        <CashCountAndroidKeyPass>$([System.Environment]::GetEnvironmentVariable('CASHCOUNT_ANDROID_KEY_PASS'))</CashCountAndroidKeyPass>
+        <CashCountAndroidStorePass>$([System.Environment]::GetEnvironmentVariable('CASHCOUNT_ANDROID_STORE_PASS'))</CashCountAndroidStorePass>
     </PropertyGroup>
 
     <!-- Android Release Signing -->
     <PropertyGroup Condition="$(TargetFramework.Contains('-android')) and '$(Configuration)' == 'Release'">
         <AndroidKeyStore>True</AndroidKeyStore>
-        <AndroidSigningKeyStore>..\cashcount.keystore</AndroidSigningKeyStore>
-        <AndroidSigningKeyAlias>cashcount</AndroidSigningKeyAlias>
-        <AndroidSigningKeyPass>CashCountLemon3.</AndroidSigningKeyPass>
-        <AndroidSigningStorePass>CashCountLemon3.</AndroidSigningStorePass>
+        <AndroidSigningKeyStore>$(CashCountAndroidKeyStore)</AndroidSigningKeyStore>
+        <AndroidSigningKeyAlias>$(CashCountAndroidKeyAlias)</AndroidSigningKeyAlias>
+        <AndroidSigningKeyPass>$(CashCountAndroidKeyPass)</AndroidSigningKeyPass>
+        <AndroidSigningStorePass>$(CashCountAndroidStorePass)</AndroidSigningStorePass>
 
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
@@ -39,6 +45,19 @@
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
         <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
     </PropertyGroup>
+
+    <Target Name="ValidateAndroidReleaseSigning"
+            BeforeTargets="Build"
+            Condition="$(TargetFramework.Contains('-android')) and '$(Configuration)' == 'Release'">
+        <Error Condition="'$(CashCountAndroidKeyStore)' == ''"
+               Text="Missing CASHCOUNT_ANDROID_KEYSTORE environment variable for Android release signing." />
+        <Error Condition="'$(CashCountAndroidKeyAlias)' == ''"
+               Text="Missing CASHCOUNT_ANDROID_KEY_ALIAS environment variable for Android release signing." />
+        <Error Condition="'$(CashCountAndroidKeyPass)' == ''"
+               Text="Missing CASHCOUNT_ANDROID_KEY_PASS environment variable for Android release signing." />
+        <Error Condition="'$(CashCountAndroidStorePass)' == ''"
+               Text="Missing CASHCOUNT_ANDROID_STORE_PASS environment variable for Android release signing." />
+    </Target>
 
     <ItemGroup>
         <!-- App Icon -->
