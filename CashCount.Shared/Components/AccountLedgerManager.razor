@@ -1,0 +1,261 @@
+@using System.Globalization
+@using CashCount.Shared.Models
+@using CashCount.Shared.Services
+@inject IStorageService StorageService
+
+<section class="af-management-shell">
+    <div class="af-header-card af-management-header">
+        <div>
+            <p class="af-eyebrow">Account management</p>
+            <h2>Accounts & funds setup</h2>
+            <p class="af-subtitle">Set up pots, bank accounts, and fund buckets here. The Funds page stays focused on summaries and fast transaction logging.</p>
+        </div>
+
+        <div class="af-header-actions">
+            <select class="af-select af-currency-select" @onchange="OnCurrencyChanged">
+                @foreach (var currency in _currencies)
+                {
+                    <option value="@currency.Symbol" selected="@(_ledger.CurrencySymbol == currency.Symbol)">@currency.Label</option>
+                }
+            </select>
+            <button class="btn-save af-header-cta" @onclick="OpenAccountModal">+ Account / fund</button>
+            <button class="btn-clear" @onclick="ResetLedger" disabled="@(!_ledger.Accounts.Any() && !_ledger.Transactions.Any())">Reset tracker</button>
+        </div>
+    </div>
+
+    <div class="af-dashboard-grid af-dashboard-grid-compact">
+        <div class="af-stat-card primary">
+            <span class="af-stat-label">Tracked accounts</span>
+            <strong>@_ledger.Accounts.Count</strong>
+            <small>@FormatAmount(_ledger.TotalBalance) live balance</small>
+        </div>
+        <div class="af-stat-card neutral">
+            <span class="af-stat-label">Opening balance</span>
+            <strong>@FormatAmount(_ledger.TotalOpeningBalance)</strong>
+            <small>Across all accounts</small>
+        </div>
+        <div class="af-stat-card success">
+            <span class="af-stat-label">Transactions logged</span>
+            <strong>@_ledger.Transactions.Count</strong>
+            <small>Use Funds for daily entries</small>
+        </div>
+    </div>
+
+    <div class="af-content-grid af-management-grid">
+        <section class="af-panel">
+            <div class="af-panel-header">
+                <div>
+                    <h3>Accounts & funds</h3>
+                    <p>Add each account once, then keep balances updated from the Funds dashboard.</p>
+                </div>
+                <div class="af-panel-actions">
+                    <span class="count-badge">@_ledger.Accounts.Count total</span>
+                    <button class="btn-save af-inline-action" @onclick="OpenAccountModal">+ Add</button>
+                </div>
+            </div>
+
+            @if (_ledger.Accounts.Any())
+            {
+                <div class="af-account-list">
+                    @foreach (var account in _ledger.Accounts.OrderBy(a => a.Name))
+                    {
+                        var balance = _ledger.GetAccountBalance(account.Id);
+                        <div class="af-account-card">
+                            <div class="af-account-main">
+                                <div>
+                                    <div class="af-account-title-row">
+                                        <strong>@account.Name</strong>
+                                        <span class="af-kind-badge">@account.Kind</span>
+                                    </div>
+                                    @if (!string.IsNullOrWhiteSpace(account.Notes))
+                                    {
+                                        <p class="af-account-note">@account.Notes</p>
+                                    }
+                                </div>
+                                <div class="af-account-balance @(balance >= 0 ? "positive" : "negative")">@FormatAmount(balance)</div>
+                            </div>
+                            <div class="af-account-meta">
+                                <span>Opening @FormatAmount(account.OpeningBalance)</span>
+                                <span>@_ledger.GetTransactionCount(account.Id) tx</span>
+                            </div>
+                            <div class="af-account-actions">
+                                <button class="btn-delete-single" @onclick="() => DeleteAccount(account.Id)">Delete</button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="tc-empty-state af-inline-empty">
+                    <span class="tc-empty-icon">🏦</span>
+                    <p>No accounts yet. Start with the cash box, main bank account, or a fund bucket.</p>
+                    <button class="btn-save af-empty-action" @onclick="OpenAccountModal">Create first account</button>
+                </div>
+            }
+        </section>
+
+        <section class="af-panel af-management-side-panel">
+            <div class="af-panel-header">
+                <div>
+                    <h3>How this MVP works</h3>
+                    <p>Keep setup here, and keep daily usage on the Funds page.</p>
+                </div>
+            </div>
+
+            <div class="af-management-notes">
+                <div class="af-management-note">
+                    <span class="af-summary-label">1. Set up accounts</span>
+                    <p>Add the places you want to track: cash, bank, savings, investment, or fund buckets.</p>
+                </div>
+                <div class="af-management-note">
+                    <span class="af-summary-label">2. Log movements in Funds</span>
+                    <p>Use the quick transaction popup on the Funds page for incoming and outgoing entries.</p>
+                </div>
+                <div class="af-management-note">
+                    <span class="af-summary-label">3. Reset carefully</span>
+                    <p>Reset clears all accounts and transactions in this local tracker. Use it only when starting over.</p>
+                </div>
+            </div>
+
+            <div class="af-panel-summary af-panel-summary-dense">
+                <div>
+                    <span class="af-summary-label">Current currency</span>
+                    <strong>@_ledger.CurrencySymbol</strong>
+                </div>
+                <div>
+                    <span class="af-summary-label">Latest transaction</span>
+                    <strong>@(_ledger.Transactions.OrderByDescending(t => t.Date).FirstOrDefault()?.Date.ToString("dd.MM.yyyy") ?? "—")</strong>
+                </div>
+                <div>
+                    <span class="af-summary-label">Where to work next</span>
+                    <strong>@(_ledger.Accounts.Any() ? "Funds dashboard" : "Create accounts here")</strong>
+                </div>
+            </div>
+
+            <a class="btn-clear af-link-btn af-management-link" href="/funds">Open Funds dashboard</a>
+        </section>
+    </div>
+</section>
+
+@if (_showAccountModal)
+{
+    <div class="af-modal-backdrop" @onclick="CloseAccountModal">
+        <div class="af-modal-card" @onclick:stopPropagation="true">
+            <div class="af-modal-header">
+                <div>
+                    <p class="af-modal-eyebrow">New account</p>
+                    <h3>Add account or fund</h3>
+                    <p>Create a pot once, then track all flow against it.</p>
+                </div>
+                <button class="af-modal-close" @onclick="CloseAccountModal" aria-label="Close">✕</button>
+            </div>
+
+            <div class="af-form-grid compact">
+                <input class="tc-input" @bind="_newAccount.Name" @bind:event="oninput" placeholder="Account name" />
+                <select class="af-select" @bind="_newAccount.Kind">
+                    @foreach (var kind in Enum.GetValues<AccountKind>())
+                    {
+                        <option value="@kind">@kind</option>
+                    }
+                </select>
+                <input class="tc-input" type="number" min="0" step="0.01" @bind="_newAccountOpeningBalance" @bind:event="oninput" placeholder="Opening balance" />
+                <input class="tc-input" @bind="_newAccount.Notes" @bind:event="oninput" placeholder="Optional note" />
+            </div>
+
+            <div class="af-modal-actions">
+                <button class="btn-clear" @onclick="CloseAccountModal">Cancel</button>
+                <button class="btn-save" @onclick="AddAccount" disabled="@(!CanAddAccount)">Create account</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private AccountLedger _ledger = new();
+    private TrackedAccount _newAccount = new();
+    private string _newAccountOpeningBalance = string.Empty;
+    private bool _showAccountModal;
+
+    private static readonly List<(string Symbol, string Label)> _currencies = new()
+    {
+        ("€", "€ EUR"),
+        ("$", "$ USD"),
+        ("£", "£ GBP"),
+        ("CHF", "CHF"),
+        ("CA$", "CA$ CAD"),
+        ("A$", "A$ AUD")
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        _ledger = await StorageService.GetAccountLedgerAsync();
+    }
+
+    private bool CanAddAccount =>
+        !string.IsNullOrWhiteSpace(_newAccount.Name) &&
+        decimal.TryParse(_newAccountOpeningBalance, NumberStyles.Any, CultureInfo.InvariantCulture, out _);
+
+    private void OpenAccountModal()
+    {
+        _showAccountModal = true;
+    }
+
+    private void CloseAccountModal()
+    {
+        _showAccountModal = false;
+    }
+
+    private async Task AddAccount()
+    {
+        if (!CanAddAccount)
+            return;
+
+        if (!decimal.TryParse(_newAccountOpeningBalance, NumberStyles.Any, CultureInfo.InvariantCulture, out var openingBalance))
+            return;
+
+        _newAccount.OpeningBalance = openingBalance;
+        _ledger.Accounts.Add(_newAccount);
+
+        _newAccount = new TrackedAccount();
+        _newAccountOpeningBalance = string.Empty;
+        _showAccountModal = false;
+
+        await PersistLedger();
+    }
+
+    private async Task DeleteAccount(string accountId)
+    {
+        _ledger.Accounts.RemoveAll(account => account.Id == accountId);
+        _ledger.Transactions.RemoveAll(transaction => transaction.AccountId == accountId);
+        await PersistLedger();
+    }
+
+    private async Task ResetLedger()
+    {
+        _ledger = new AccountLedger
+        {
+            CurrencySymbol = _ledger.CurrencySymbol
+        };
+        _newAccount = new TrackedAccount();
+        _newAccountOpeningBalance = string.Empty;
+        _showAccountModal = false;
+        await PersistLedger();
+    }
+
+    private async Task OnCurrencyChanged(ChangeEventArgs args)
+    {
+        _ledger.CurrencySymbol = args.Value?.ToString() ?? "€";
+        await PersistLedger();
+    }
+
+    private async Task PersistLedger()
+    {
+        await StorageService.SaveAccountLedgerAsync(_ledger);
+    }
+
+    private string FormatAmount(decimal amount)
+    {
+        return $"{_ledger.CurrencySymbol} {amount.ToString("N2", CultureInfo.InvariantCulture)}";
+    }
+}

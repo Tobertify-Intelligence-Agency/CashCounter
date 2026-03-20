@@ -1252,8 +1252,11 @@
 
 .account-container {
     padding: 1rem;
-    max-width: 600px;
+    max-width: 1100px;
     margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
 }
 
 .loading-state {
@@ -1283,6 +1286,9 @@
     background: var(--card-bg);
     border-radius: var(--radius);
     box-shadow: var(--shadow);
+    max-width: 600px;
+    width: 100%;
+    margin: 0 auto;
 }
 
 .account-icon {
@@ -1312,6 +1318,9 @@
     border-radius: var(--radius);
     box-shadow: var(--shadow);
     overflow: hidden;
+    max-width: 600px;
+    width: 100%;
+    margin: 0 auto;
 }
 
 .account-header {
@@ -2038,7 +2047,8 @@
    Account / Fund Tracker MVP
    ============================================================ */
 
-.account-funds {
+.account-funds,
+.af-management-shell {
     max-width: 1100px;
     margin: 0 auto;
     padding: 1rem;
@@ -2061,6 +2071,14 @@
     gap: 1rem;
     align-items: flex-start;
     flex-wrap: wrap;
+}
+
+.af-header-card-dashboard {
+    align-items: center;
+}
+
+.af-management-header {
+    align-items: center;
 }
 
 .af-eyebrow {
@@ -2185,6 +2203,13 @@
     white-space: nowrap;
 }
 
+.af-link-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+}
+
 .af-panel-summary {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2291,6 +2316,10 @@
     background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
 }
 
+.af-account-card-readonly {
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
 .af-account-main {
     display: flex;
     justify-content: space-between;
@@ -2347,6 +2376,27 @@
     padding: 1.5rem 1rem;
     background: var(--background);
     border-radius: var(--radius-sm);
+}
+
+.af-inline-empty-tight {
+    margin-top: 1rem;
+}
+
+.af-empty-hero {
+    padding: 0.5rem;
+}
+
+.af-hero-empty-state h3 {
+    margin: 0 0 0.5rem 0;
+    color: var(--text-primary);
+}
+
+.af-empty-actions {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
 }
 
 .af-category-item {
@@ -2451,21 +2501,61 @@
     margin-top: 1rem;
 }
 
+.af-dashboard-grid-compact {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.af-management-grid {
+    grid-template-columns: 1.15fr 0.85fr;
+}
+
+.af-management-side-panel {
+    align-self: start;
+}
+
+.af-management-notes {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.af-management-note {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: #f8fafc;
+    padding: 0.9rem 1rem;
+}
+
+.af-management-note p {
+    margin: 0.35rem 0 0 0;
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+}
+
+.af-management-link {
+    margin-top: 1rem;
+}
+
 @media (max-width: 900px) {
     .af-dashboard-grid,
     .af-content-grid,
-    .af-panel-summary {
+    .af-panel-summary,
+    .af-management-grid {
         grid-template-columns: 1fr 1fr;
     }
 }
 
 @media (max-width: 700px) {
-    .account-funds {
+    .account-funds,
+    .af-management-shell {
         padding: 0.5rem;
     }
 
     .af-dashboard-grid,
+    .af-dashboard-grid-compact,
     .af-content-grid,
+    .af-management-grid,
     .af-form-grid,
     .af-form-grid.compact,
     .af-panel-summary,
