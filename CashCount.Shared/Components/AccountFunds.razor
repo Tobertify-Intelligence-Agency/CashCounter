@@ -1,17 +1,20 @@
 @using System.Globalization
 @using CashCount.Shared.Models
 @using CashCount.Shared.Services
+@using CashCount.Shared.Services.Localization
 @using Microsoft.AspNetCore.Components.Forms
 @inject IStorageService StorageService
+@inject IAppTextService Text
+@implements IDisposable
 
 <div class="account-funds account-funds-minimal">
     <section class="af-hero-strip">
         <div>
-            <p class="af-eyebrow">Funds</p>
+            <p class="af-eyebrow">@Text["funds.eyebrow"]</p>
             <div class="af-hero-balance @( _ledger.TotalBalance >= 0 ? "positive" : "negative")">@FormatAmount(_ledger.TotalBalance)</div>
             <div class="af-hero-meta">
-                <span>@_ledger.Accounts.Count account(s)</span>
-                <span>Net @FormatSignedAmount(_ledger.NetFlow)</span>
+                <span>@Text.Format("funds.accountsCount", _ledger.Accounts.Count)</span>
+                <span>@Text.Format("funds.net", FormatSignedAmount(_ledger.NetFlow))</span>
             </div>
         </div>
     </section>
@@ -21,10 +24,10 @@
         <section class="af-panel af-empty-hero af-minimal-empty">
             <div class="tc-empty-state af-inline-empty af-hero-empty-state">
                 <span class="tc-empty-icon">🏦</span>
-                <h3>No accounts yet</h3>
-                <p>Create your first cash box, bank account, or fund bucket on the Account page. This screen becomes your fast snapshot once at least one account exists.</p>
+                <h3>@Text["funds.empty.title"]</h3>
+                <p>@Text["funds.empty.body"]</p>
                 <div class="af-empty-actions">
-                    <a class="btn-save af-link-btn" href="/account">Create first account</a>
+                    <a class="btn-save af-link-btn" href="/account">@Text["funds.empty.action"]</a>
                 </div>
             </div>
         </section>
@@ -35,10 +38,10 @@
             <summary class="af-collapsible-summary">
                 <div class="af-section-heading-row af-collapsible-heading">
                     <div>
-                        <h3>Accounts</h3>
-                        <p>Live balances first.</p>
+                        <h3>@Text["funds.accounts.title"]</h3>
+                        <p>@Text["funds.accounts.body"]</p>
                     </div>
-                    <span class="count-badge">@_ledger.CurrencySymbol default</span>
+                    <span class="count-badge">@Text.Format("funds.defaultCurrency", _ledger.CurrencySymbol)</span>
                 </div>
             </summary>
 
@@ -54,7 +57,7 @@
                                     <span class="af-kind-badge">@account.Kind</span>
                                 </div>
                                 <div class="af-account-meta af-account-meta-compact">
-                                    <span>@_ledger.GetTransactionCount(account.Id) tx</span>
+                                    <span>@Text.Format("funds.transactionsShort", _ledger.GetTransactionCount(account.Id))</span>
                                 </div>
                             </div>
                             <div class="af-account-balance @(balance >= 0 ? "positive" : "negative")">@FormatAmount(balance)</div>
@@ -68,8 +71,8 @@
             <summary class="af-collapsible-summary">
                 <div class="af-section-heading-row af-section-heading-row-tight af-collapsible-heading">
                     <div>
-                        <h3>Flow</h3>
-                        <p>Income, expenses, and balance at a glance.</p>
+                        <h3>@Text["funds.flow.title"]</h3>
+                        <p>@Text["funds.flow.body"]</p>
                     </div>
                     <div class="af-flow-badge @( _ledger.NetFlow >= 0 ? "positive" : "negative")">@FormatSignedAmount(_ledger.NetFlow)</div>
                 </div>
@@ -77,29 +80,29 @@
 
             <div class="af-visual-grid">
                 <div class="af-visual-card incoming">
-                    <span class="af-summary-label">Income</span>
+                    <span class="af-summary-label">@Text["travel.summary.income"]</span>
                     <strong>@FormatAmount(_ledger.TotalIncoming)</strong>
                     <div class="af-meter-track">
                         <div class="af-meter-fill incoming" style="width:@IncomeFillPercent%"></div>
                     </div>
-                    <small>@_ledger.Transactions.Count(t => t.Direction == CashFlowDirection.Incoming) entry(s)</small>
+                    <small>@Text.Format("funds.flow.incomeEntries", _ledger.Transactions.Count(t => t.Direction == CashFlowDirection.Incoming))</small>
                 </div>
 
                 <div class="af-visual-card outgoing">
-                    <span class="af-summary-label">Expenses</span>
+                    <span class="af-summary-label">@Text["travel.summary.expenses"]</span>
                     <strong>@FormatAmount(_ledger.TotalOutgoing)</strong>
                     <div class="af-meter-track">
                         <div class="af-meter-fill outgoing" style="width:@OutgoingFillPercent%"></div>
                     </div>
-                    <small>@_ledger.Transactions.Count(t => t.Direction == CashFlowDirection.Outgoing) entry(s)</small>
+                    <small>@Text.Format("funds.flow.expenseEntries", _ledger.Transactions.Count(t => t.Direction == CashFlowDirection.Outgoing))</small>
                 </div>
 
                 <div class="af-visual-card balance">
-                    <span class="af-summary-label">Balance</span>
+                    <span class="af-summary-label">@Text["funds.balance"]</span>
                     <strong class="@(_ledger.TotalBalance >= 0 ? "positive" : "negative")">@FormatAmount(_ledger.TotalBalance)</strong>
                     <div class="af-balance-split af-balance-split-single">
                         <div>
-                            <span class="af-summary-label">Activity</span>
+                            <span class="af-summary-label">@Text["funds.activity"]</span>
                             <strong class="@(_ledger.NetFlow >= 0 ? "positive" : "negative")">@FormatSignedAmount(_ledger.NetFlow)</strong>
                         </div>
                     </div>
@@ -113,8 +116,8 @@
             <summary class="af-collapsible-summary">
                 <div class="af-panel-header af-panel-header-minimal af-collapsible-heading">
                     <div>
-                        <h3>Category overview</h3>
-                        <p>Where money comes from and where it goes.</p>
+                        <h3>@Text["funds.categoryOverview.title"]</h3>
+                        <p>@Text["funds.categoryOverview.body"]</p>
                     </div>
                 </div>
             </summary>
@@ -126,9 +129,9 @@
                         <div class="af-category-donut-shell">
                             <div class="af-category-donut" style="background:@CategoryChartStyle;">
                                 <div class="af-category-donut-hole">
-                                    <span class="af-summary-label">Tracked</span>
+                                    <span class="af-summary-label">@Text["funds.categoryOverview.tracked"]</span>
                                     <strong>@VisibleCategorySummaries.Count</strong>
-                                    <small>categories</small>
+                                    <small>@Text["funds.categoryOverview.categories"]</small>
                                 </div>
                             </div>
                         </div>
@@ -144,9 +147,9 @@
                                         <strong>@category.Category</strong>
                                     </div>
                                     <div class="af-category-meta">
-                                        <span>@FormatPercent(CategoryShare(category)) of activity</span>
-                                        <span class="positive">In @FormatAmount(category.Incoming)</span>
-                                        <span class="negative">Out @FormatAmount(category.Outgoing)</span>
+                                        <span>@Text.Format("funds.categoryOverview.share", FormatPercent(CategoryShare(category)))</span>
+                                        <span class="positive">@Text.Format("funds.categoryOverview.in", FormatAmount(category.Incoming))</span>
+                                        <span class="negative">@Text.Format("funds.categoryOverview.out", FormatAmount(category.Outgoing))</span>
                                     </div>
                                 </div>
                                 <div class="af-category-net @(category.Net >= 0 ? "positive" : "negative")">@FormatSignedAmount(category.Net)</div>
@@ -159,7 +162,7 @@
             {
                 <div class="tc-empty-state af-inline-empty">
                     <span class="tc-empty-icon">📊</span>
-                    <p>Categories appear once transactions start using them.</p>
+                    <p>@Text["funds.categoryOverview.empty"]</p>
                 </div>
             }
         </details>
@@ -168,10 +171,10 @@
             <summary class="af-collapsible-summary">
                 <div class="af-panel-header af-panel-header-minimal af-collapsible-heading">
                     <div>
-                        <h3>Recent</h3>
-                        <p>Latest movements across all tracked accounts.</p>
+                        <h3>@Text["funds.recent.title"]</h3>
+                        <p>@Text["funds.recent.body"]</p>
                     </div>
-                    <span class="count-badge">@_ledger.Transactions.Count total</span>
+                    <span class="count-badge">@Text.Format("funds.recent.total", _ledger.Transactions.Count)</span>
                 </div>
             </summary>
 
@@ -180,7 +183,7 @@
                 <div class="af-transaction-list">
                     @foreach (var transaction in RecentTransactions)
                     {
-                        var accountName = _ledger.Accounts.FirstOrDefault(a => a.Id == transaction.AccountId)?.Name ?? "Unknown account";
+                        var accountName = _ledger.Accounts.FirstOrDefault(a => a.Id == transaction.AccountId)?.Name ?? Text["funds.recent.unknownAccount"];
                         <div class="tc-entry @(transaction.Direction == CashFlowDirection.Incoming ? "income" : "expense")">
                             <div class="tc-entry-type-bar"></div>
                             <div class="tc-entry-body">
@@ -209,9 +212,9 @@
                                         }
                                         @if (transaction.HasAttachment)
                                         {
-                                            <span class="af-attachment-chip">Photo</span>
+                                            <span class="af-attachment-chip">@Text["funds.recent.photo"]</span>
                                         }
-                                        <span class="tc-entry-date">@transaction.Date.ToString("dd.MM.yyyy")</span>
+                                        <span class="tc-entry-date">@transaction.Date.ToString("d", Text.CurrentCulture)</span>
                                     </span>
                                     <button class="tc-btn-delete" @onclick="() => DeleteTransaction(transaction.Id)">✕</button>
                                 </div>
@@ -224,7 +227,7 @@
             {
                 <div class="tc-empty-state af-inline-empty af-inline-empty-tight">
                     <span class="tc-empty-icon">🧾</span>
-                    <p>No transactions yet. Use the add button to log the first movement.</p>
+                    <p>@Text["funds.recent.empty"]</p>
                 </div>
             }
         </details>
@@ -232,7 +235,7 @@
 
     @if (_ledger.Accounts.Any())
     {
-        <button class="af-fab" @onclick="() => OpenTransactionModal(CashFlowDirection.Outgoing)" aria-label="Add transaction">
+        <button class="af-fab" @onclick="() => OpenTransactionModal(CashFlowDirection.Outgoing)" aria-label="@Text["funds.fab.addTransaction"]">
             <span>+</span>
         </button>
     }
@@ -243,16 +246,16 @@
     <div class="af-modal-backdrop" @onclick="CloseTransactionModal">
         <div class="af-modal-card af-modal-card-wide" @onclick:stopPropagation="true">
             <div class="af-modal-header af-modal-header-simple">
-                <h3>Add transaction</h3>
+                <h3>@Text["funds.modal.title"]</h3>
             </div>
 
-            <div class="tc-segmented-toggle" role="group" aria-label="Transaction type">
+            <div class="tc-segmented-toggle" role="group" aria-label="@Text["funds.modal.type"]">
                 <button type="button"
                         class="tc-segmented-btn @(_newTransaction.Direction == CashFlowDirection.Outgoing ? "active expense" : string.Empty)"
-                        @onclick='() => SetTransactionDirection(CashFlowDirection.Outgoing)'>Outgoing</button>
+                        @onclick='() => SetTransactionDirection(CashFlowDirection.Outgoing)'>@Text["funds.modal.outgoing"]</button>
                 <button type="button"
                         class="tc-segmented-btn @(_newTransaction.Direction == CashFlowDirection.Incoming ? "active income" : string.Empty)"
-                        @onclick='() => SetTransactionDirection(CashFlowDirection.Incoming)'>Incoming</button>
+                        @onclick='() => SetTransactionDirection(CashFlowDirection.Incoming)'>@Text["funds.modal.incoming"]</button>
             </div>
 
             <div class="af-form-grid">
@@ -262,22 +265,22 @@
                         <option value="@account.Id">@account.Name</option>
                     }
                 </select>
-                <input class="tc-input" @bind="_newTransaction.Description" @bind:event="oninput" placeholder="Description" />
-                <input class="tc-input" type="number" min="0" step="0.01" @bind="_newTransactionAmount" @bind:event="oninput" placeholder="Amount" />
-                <input class="tc-input" list="transaction-categories" @bind="_newTransaction.Category" @bind:event="oninput" placeholder="Category" />
+                <input class="tc-input" @bind="_newTransaction.Description" @bind:event="oninput" placeholder="@Text["funds.modal.description"]" />
+                <input class="tc-input" type="number" min="0" step="0.01" @bind="_newTransactionAmount" @bind:event="oninput" placeholder="@Text["funds.modal.amount"]" />
+                <input class="tc-input" list="transaction-categories" @bind="_newTransaction.Category" @bind:event="oninput" placeholder="@Text["funds.modal.category"]" />
                 <input class="tc-input" type="date" @bind="_newTransaction.Date" @bind:event="oninput" />
-                <input class="tc-input" @bind="_newTransaction.Notes" @bind:event="oninput" placeholder="Optional note" />
+                <input class="tc-input" @bind="_newTransaction.Notes" @bind:event="oninput" placeholder="@Text["funds.modal.optionalNote"]" />
             </div>
 
             <section class="af-attachment-section">
                 <div class="af-attachment-header">
                     <div>
-                        <h4>Picture</h4>
-                        <p>One optional image, resized before saving.</p>
+                        <h4>@Text["funds.modal.pictureTitle"]</h4>
+                        <p>@Text["funds.modal.pictureBody"]</p>
                     </div>
                     @if (_newTransaction.HasAttachment)
                     {
-                        <span class="af-attachment-chip">Attached</span>
+                        <span class="af-attachment-chip">@Text["funds.modal.attached"]</span>
                     }
                 </div>
 
@@ -296,11 +299,11 @@
                 <div class="af-attachment-inline-control @(_newTransaction.HasAttachment ? "has-value" : string.Empty)">
                     <span class="af-attachment-inline-value">@AttachmentInputLabel</span>
                     <div class="af-attachment-inline-actions">
-                        <label class="af-inline-icon-btn" for="transaction-photo-picker" title="Choose from files or gallery" aria-label="Choose from files or gallery">🖼️</label>
-                        <label class="af-inline-icon-btn" for="transaction-camera-picker" title="Take a photo" aria-label="Take a photo">📷</label>
+                        <label class="af-inline-icon-btn" for="transaction-photo-picker" title="@Text["funds.modal.chooseFile"]" aria-label="@Text["funds.modal.chooseFile"]">🖼️</label>
+                        <label class="af-inline-icon-btn" for="transaction-camera-picker" title="@Text["funds.modal.takePhoto"]" aria-label="@Text["funds.modal.takePhoto"]">📷</label>
                         @if (_newTransaction.HasAttachment)
                         {
-                            <button type="button" class="af-inline-icon-btn af-inline-icon-btn-danger" @onclick="RemoveAttachment" title="Remove picture" aria-label="Remove picture">✕</button>
+                            <button type="button" class="af-inline-icon-btn af-inline-icon-btn-danger" @onclick="RemoveAttachment" title="@Text["funds.modal.removePicture"]" aria-label="@Text["funds.modal.removePicture"]">✕</button>
                         }
                     </div>
                 </div>
@@ -310,15 +313,15 @@
                     <div class="af-attachment-preview-card">
                         <img src="@_newTransaction.AttachmentDataUrl" alt="Selected transaction picture" class="af-attachment-preview-image" />
                         <div class="af-attachment-actions">
-                            <label class="af-link-action" for="transaction-photo-picker">Replace picture</label>
-                            <label class="af-link-action" for="transaction-camera-picker">Take new</label>
-                            <button type="button" class="af-link-action af-link-action-danger" @onclick="RemoveAttachment">Remove</button>
+                            <label class="af-link-action" for="transaction-photo-picker">@Text["funds.modal.replacePicture"]</label>
+                            <label class="af-link-action" for="transaction-camera-picker">@Text["funds.modal.takeNew"]</label>
+                            <button type="button" class="af-link-action af-link-action-danger" @onclick="RemoveAttachment">@Text["funds.modal.remove"]</button>
                         </div>
                     </div>
                 }
                 else
                 {
-                    <p class="af-attachment-helper">Add a receipt, invoice, or reference photo.</p>
+                    <p class="af-attachment-helper">@Text["funds.modal.helper"]</p>
                 }
 
                 @if (!string.IsNullOrWhiteSpace(_attachmentError))
@@ -335,11 +338,11 @@
             </datalist>
 
             <div class="af-modal-actions">
-                <button class="btn-clear af-modal-cancel" @onclick="CloseTransactionModal">Cancel</button>
+                <button class="btn-clear af-modal-cancel" @onclick="CloseTransactionModal">@Text["app.cancel"]</button>
                 <button class="tc-btn-add @(_newTransaction.Direction == CashFlowDirection.Incoming ? "income" : "expense")"
                         @onclick="AddTransaction"
                         disabled="@(!CanAddTransaction)">
-                    + Add @(_newTransaction.Direction == CashFlowDirection.Incoming ? "incoming" : "outgoing")
+                    @(_newTransaction.Direction == CashFlowDirection.Incoming ? Text["funds.modal.addIncoming"] : Text["funds.modal.addOutgoing"])
                 </button>
             </div>
         </div>
@@ -370,6 +373,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        Text.Changed += OnTextChanged;
         _ledger = await StorageService.GetAccountLedgerAsync();
 
         if (!_ledger.Accounts.Any() && !_ledger.Transactions.Any())
@@ -379,6 +383,8 @@
 
         PrepareNewTransaction();
     }
+
+    private void OnTextChanged() => InvokeAsync(StateHasChanged);
 
     private IEnumerable<TrackedAccount> SortedAccounts => _ledger.Accounts
         .OrderByDescending(a => _ledger.GetAccountBalance(a.Id))
@@ -404,8 +410,8 @@
     private string OutgoingFillPercent => ActivityMax <= 0 ? "0" : ((double)(_ledger.TotalOutgoing / ActivityMax) * 100d).ToString("0.#", CultureInfo.InvariantCulture);
     private string CategoryChartStyle => BuildCategoryChartStyle();
     private string AttachmentInputLabel => _newTransaction.HasAttachment
-        ? _newTransaction.AttachmentFileName ?? "Attached picture"
-        : "Add receipt or photo";
+        ? _newTransaction.AttachmentFileName ?? Text["funds.modal.attached"]
+        : Text["funds.modal.picturePlaceholder"];
 
     private bool CanAddTransaction =>
         !string.IsNullOrWhiteSpace(_newTransaction.AccountId) &&
@@ -449,7 +455,7 @@
 
         if (!file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
         {
-            _attachmentError = "Please select an image file.";
+            _attachmentError = Text["funds.modal.imageOnly"];
             return;
         }
 
@@ -462,7 +468,7 @@
 
             if (memoryStream.Length == 0)
             {
-                _attachmentError = "The selected image could not be read.";
+                _attachmentError = Text["funds.modal.imageUnreadable"];
                 return;
             }
 
@@ -472,25 +478,22 @@
         }
         catch (IOException)
         {
-            _attachmentError = "That image is still too large after resizing. Try a smaller photo.";
+            _attachmentError = Text["funds.modal.imageTooLarge"];
             RemoveAttachment(resetPicker: false);
         }
         catch (ObjectDisposedException)
         {
-            _attachmentError = "The image picker closed before the photo finished loading. Please try again.";
+            _attachmentError = Text["funds.modal.imagePickerClosed"];
             RemoveAttachment(resetPicker: false);
         }
         catch (Exception)
         {
-            _attachmentError = "Could not attach that image on this device/browser.";
+            _attachmentError = Text["funds.modal.imageAttachFailed"];
             RemoveAttachment(resetPicker: false);
         }
     }
 
-    private void RemoveAttachment()
-    {
-        RemoveAttachment(resetPicker: true);
-    }
+    private void RemoveAttachment() => RemoveAttachment(resetPicker: true);
 
     private void RemoveAttachment(bool resetPicker)
     {
@@ -503,10 +506,7 @@
         }
     }
 
-    private void ResetAttachmentPicker()
-    {
-        _attachmentInputVersion++;
-    }
+    private void ResetAttachmentPicker() => _attachmentInputVersion++;
 
     private async Task AddTransaction()
     {
@@ -610,18 +610,23 @@
 
     private string FormatAmount(decimal amount, bool includeCurrency = true)
     {
-        var number = amount.ToString("N2", CultureInfo.InvariantCulture);
+        var number = amount.ToString("N2", Text.CurrentCulture);
         return includeCurrency ? $"{_ledger.CurrencySymbol} {number}" : number;
     }
 
     private string FormatSignedAmount(decimal amount)
     {
         var prefix = amount >= 0 ? "+" : "-";
-        return $"{prefix}{_ledger.CurrencySymbol} {Math.Abs(amount).ToString("N2", CultureInfo.InvariantCulture)}";
+        return $"{prefix}{_ledger.CurrencySymbol} {Math.Abs(amount).ToString("N2", Text.CurrentCulture)}";
     }
 
     private string FormatPercent(decimal value)
     {
-        return value.ToString("P0", CultureInfo.InvariantCulture);
+        return value.ToString("P0", Text.CurrentCulture);
+    }
+
+    public void Dispose()
+    {
+        Text.Changed -= OnTextChanged;
     }
 }

@@ -7,6 +7,7 @@ using CashCount.Shared.Services.Auth;
 using CashCount.Shared.Services.Billing;
 using CashCount.Web.Services.Auth;
 using CashCount.Web.Services.Billing;
+using CashCount.Shared.Services.Localization;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -30,3 +31,4 @@ builder.Services.AddScoped<IStorageService, LocalStorageService>();
 builder.Services.AddScoped<IPremiumService, PremiumService>();
 
 await builder.Build().RunAsync();
+ld().RunAsync();

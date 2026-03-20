@@ -2,82 +2,92 @@
 @using CashCount.Shared.Services
 @using CashCount.Shared.Services.Auth
 @using CashCount.Shared.Services.Billing
+@using CashCount.Shared.Services.Localization
 @inject IAuthService AuthService
 @inject IPremiumService PremiumService
 @inject IBillingService BillingService
 @inject NavigationManager NavigationManager
+@inject IAppTextService Text
 @implements IDisposable
 
-<div class="account-container">
+<div class="account-container account-container-minimal">
     @if (_isLoading)
     {
         <div class="loading-state">
             <div class="spinner"></div>
-            <p>Loading...</p>
+            <p>@Text["account.loading"]</p>
         </div>
     }
     else if (_user == null)
     {
-        <div class="not-signed-in">
+        <section class="not-signed-in not-signed-in-minimal">
             <div class="account-icon">👤</div>
-            <h2>Account</h2>
-            <p>Sign in to sync your data across devices and access premium features.</p>
+            <h2>@Text["account.signedOut.title"]</h2>
+            <p>@Text["account.signedOut.body"]</p>
             <div class="auth-buttons">
-                <a href="/login" class="btn-primary">Sign In</a>
-                <a href="/register" class="btn-secondary">Create Account</a>
+                <a href="/login" class="btn-primary">@Text["account.signIn"]</a>
+                <a href="/register" class="btn-secondary">@Text["account.create"]</a>
             </div>
-        </div>
+        </section>
     }
     else
     {
-        <div class="account-card">
-            <div class="account-header">
-                @if (!string.IsNullOrEmpty(_user.PhotoUrl))
-                {
-                    <img src="@_user.PhotoUrl" alt="Profile" class="profile-photo" />
-                }
-                else
-                {
-                    <div class="profile-placeholder">
-                        @(_user.DisplayName?.FirstOrDefault().ToString().ToUpper() ?? "U")
-                    </div>
-                }
-                <div class="account-info">
-                    <h2>@_user.DisplayName</h2>
-                    <p class="account-email">@_user.Email</p>
-                    @if (!string.IsNullOrEmpty(_user.AuthProvider))
+        <section class="account-card account-card-minimal">
+            <div class="account-header account-header-minimal">
+                <div class="account-header-main">
+                    @if (!string.IsNullOrEmpty(_user.PhotoUrl))
                     {
-                        <span class="auth-provider-badge">@GetProviderName(_user.AuthProvider)</span>
+                        <img src="@_user.PhotoUrl" alt="Profile" class="profile-photo" />
                     }
+                    else
+                    {
+                        <div class="profile-placeholder">
+                            @(_user.DisplayName?.FirstOrDefault().ToString().ToUpper() ?? "U")
+                        </div>
+                    }
+                    <div class="account-info">
+                        <p class="af-eyebrow">@Text["account.profile"]</p>
+                        <h2>@_user.DisplayName</h2>
+                        <p class="account-email">@_user.Email</p>
+                        @if (!string.IsNullOrEmpty(_user.AuthProvider))
+                        {
+                            <span class="auth-provider-badge">@GetProviderName(_user.AuthProvider)</span>
+                        }
+                    </div>
                 </div>
+                <button class="btn-signout btn-signout-inline" @onclick="SignOutAsync">@Text["account.signOut"]</button>
             </div>
 
-            <div class="premium-section">
-                <h3>Premium Status</h3>
+            <div class="premium-section premium-section-minimal">
+                <div class="af-panel-header af-panel-header-minimalized">
+                    <div>
+                        <h3>@Text["account.premiumStatus"]</h3>
+                    </div>
+                </div>
 
                 @if (_isPremium)
                 {
-                    <div class="premium-active">
-                        <div class="premium-badge-large">Premium Active</div>
+                    <div class="premium-active premium-active-minimal">
+                        <div class="premium-badge-large">@Text["account.premiumActive"]</div>
                         @if (_user.PremiumExpiryDate.HasValue)
                         {
-                            <p class="expiry-date">Valid until @_user.PremiumExpiryDate.Value.ToString("MMMM dd, yyyy")</p>
+                            <p class="expiry-date">@Text.Format("account.validUntil", _user.PremiumExpiryDate.Value.ToString("D", Text.CurrentCulture))</p>
                         }
                         <ul class="premium-features-list">
-                            <li>Currency selection (6 currencies)</li>
-                            <li>Save and load cash counts</li>
-                            <li>Sync across devices</li>
+                            <li>@Text["account.premium.feature.currency"]</li>
+                            <li>@Text["account.premium.feature.save"]</li>
+                            <li>@Text["account.premium.feature.sync"]</li>
                         </ul>
                     </div>
                 }
                 else
                 {
-                    <div class="premium-upgrade">
-                        <h4>Upgrade to Premium</h4>
+                    <div class="premium-upgrade premium-upgrade-minimal">
+                        <h4>@Text["account.upgradeTitle"]</h4>
                         <ul class="premium-features-list">
-                            <li>Currency selection (6 currencies)</li>
-                            <li>Save and load cash counts</li>
-                            <li>Sync across devices</li>
+                            <li>@Text["account.premium.feature.currency"]</li>
+                            <li>@Text["account.premium.feature.save"]</li>
+                            <li>@Text["account.premium.feature.sync"]</li>
                         </ul>
 
                         @if (_purchaseError != null)
@@ -95,24 +105,24 @@
                                             disabled="@_isPurchasing">
                                         @if (_isPurchasing)
                                         {
-                                            <span>Processing...</span>
+                                            <span>@Text["account.processing"]</span>
                                         }
                                         else
                                         {
-                                            <span>Upgrade for @product.FormattedPrice</span>
+                                            <span>@Text.Format("account.upgradeFor", product.FormattedPrice)</span>
                                         }
                                     </button>
                                 }
                                 <button class="btn-restore" @onclick="RestorePurchasesAsync" disabled="@_isPurchasing">
-                                    Restore Purchases
+                                    @Text["account.restore"]
                                 </button>
                             </div>
                         }
                         else
                         {
                             <div class="purchase-unavailable">
-                                <p>In-app purchases are available on iOS and Android.</p>
-                                <p>Download the app to upgrade to Premium:</p>
+                                <p>@Text["account.purchaseUnavailable.title"]</p>
+                                <p>@Text["account.purchaseUnavailable.body"]</p>
                                 <div class="store-links">
                                     <a href="https://apps.apple.com" class="store-badge appstore" target="_blank">App Store</a>
                                     <a href="https://play.google.com" class="store-badge playstore" target="_blank">Google Play</a>
@@ -122,13 +132,7 @@
                     </div>
                 }
             </div>
-
-            <div class="account-actions">
-                <button class="btn-signout" @onclick="SignOutAsync">
-                    Sign Out
-                </button>
-            </div>
-        </div>
+        </section>
     }
 
     <CashCount.Shared.Components.AccountLedgerManager />
@@ -145,9 +149,12 @@
 
     protected override async Task OnInitializedAsync()
     {
+        Text.Changed += OnTextChanged;
         await LoadAccountDataAsync();
         BillingService.PurchaseCompleted += OnPurchaseCompleted;
     }
+
+    private void OnTextChanged() => InvokeAsync(StateHasChanged);
 
     private async Task LoadAccountDataAsync()
     {
@@ -210,7 +217,7 @@
         }
         else
         {
-            _purchaseError = "No purchases found to restore.";
+            _purchaseError = Text["account.noPurchases"];
         }
 
         StateHasChanged();
@@ -237,16 +244,17 @@
     {
         return provider.ToLowerInvariant() switch
         {
-            "google.com" => "Google",
-            "apple.com" => "Apple",
-            "microsoft.com" => "Microsoft",
-            "password" or "email" => "Email",
+            "google.com" => Text["account.provider.google"],
+            "apple.com" => Text["account.provider.apple"],
+            "microsoft.com" => Text["account.provider.microsoft"],
+            "password" or "email" => Text["account.provider.email"],
             _ => provider
         };
     }
 
     public void Dispose()
     {
+        Text.Changed -= OnTextChanged;
         BillingService.PurchaseCompleted -= OnPurchaseCompleted;
     }
 }

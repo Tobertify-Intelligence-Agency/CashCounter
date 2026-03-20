@@ -1,12 +1,13 @@
 @using Microsoft.AspNetCore.Components.Routing
 @inject NavigationManager NavigationManager
+@inject IAppTextService Text
 @implements IDisposable
 
 <div class="app-shell @(IsMenuOpen ? "menu-open" : "")">
     <aside class="side-menu">
         <div class="menu-header">
-            <h2>Tools</h2>
-            <button class="menu-close" @onclick="ToggleMenu">X</button>
+            <h2>@Text["app.tools"]</h2>
+            <button class="menu-close" @onclick="ToggleMenu" aria-label="Close">✕</button>
         </div>
         <nav class="menu-nav">
             @foreach (var tool in Tools)
@@ -15,12 +16,21 @@
                    class="menu-item @(IsCurrentTool(tool) ? "active" : "")"
                    @onclick="CloseMenu">
                     <span class="menu-icon">@tool.Icon</span>
-                    <span class="menu-label">@tool.Name</span>
+                    <span class="menu-label">@Text[tool.LabelKey]</span>
                 </a>
             }
         </nav>
         <div class="menu-footer">
-            <span class="app-version">v1.1</span>
+            <div class="app-language-switcher app-language-switcher-menu">
+                <label for="menu-language">@Text["app.language"]</label>
+                <select id="menu-language" class="app-language-select" value="@Text.CurrentLanguage.Code" @onchange="OnLanguageChanged">
+                    @foreach (var language in Text.Languages)
+                    {
+                        <option value="@language.Code">@language.NativeName</option>
+                    }
+                </select>
+            </div>
+            <span class="app-version">@Text["app.version"]</span>
         </div>
     </aside>
 
@@ -32,6 +42,15 @@
                 <span class="hamburger-icon">&#9776;</span>
             </button>
             <h1 class="current-tool-name">@GetCurrentToolName()</h1>
+            <div class="app-language-switcher app-language-switcher-top">
+                <label for="top-language">@Text["app.languageShort"]</label>
+                <select id="top-language" class="app-language-select" value="@Text.CurrentLanguage.Code" @onchange="OnLanguageChanged">
+                    @foreach (var language in Text.Languages)
+                    {
+                        <option value="@language.Code">@language.Code.ToUpperInvariant()</option>
+                    }
+                </select>
+            </div>
         </header>
         <div class="content-area">
             @ChildContent
@@ -51,24 +70,38 @@
 
     private List<ToolItem> Tools { get; } = new()
     {
-        new ToolItem { Id = "cash-counter", Name = "Cash Counter", Icon = "💰", Href = "/" },
-        new ToolItem { Id = "saved-counts", Name = "Saved Counts", Icon = "💾", Href = "/saved" },
-        new ToolItem { Id = "travel-cost", Name = "Travel Cost", Icon = "✈️", Href = "/travel-cost" },
-        new ToolItem { Id = "saved-trips", Name = "Saved Trips", Icon = "🗺️", Href = "/saved-trips" },
-        new ToolItem { Id = "funds", Name = "Funds", Icon = "🏦", Href = "/funds" },
-        new ToolItem { Id = "account", Name = "Account", Icon = "👤", Href = "/account" }
+        new ToolItem { Id = "cash-counter", LabelKey = "tool.cashCounter", Icon = "💰", Href = "/" },
+        new ToolItem { Id = "saved-counts", LabelKey = "tool.savedCounts", Icon = "💾", Href = "/saved" },
+        new ToolItem { Id = "travel-cost", LabelKey = "tool.travelCost", Icon = "✈️", Href = "/travel-cost" },
+        new ToolItem { Id = "saved-trips", LabelKey = "tool.savedTrips", Icon = "🗺️", Href = "/saved-trips" },
+        new ToolItem { Id = "funds", LabelKey = "tool.funds", Icon = "🏦", Href = "/funds" },
+        new ToolItem { Id = "account", LabelKey = "tool.account", Icon = "👤", Href = "/account" }
     };
 
     protected override void OnInitialized()
     {
         UpdateCurrentPath();
         NavigationManager.LocationChanged += OnLocationChanged;
+        Text.Changed += OnTextChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Text.InitializeAsync();
+        }
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
         UpdateCurrentPath();
         IsMenuOpen = false;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnTextChanged()
+    {
         InvokeAsync(StateHasChanged);
     }
 
@@ -90,6 +123,12 @@
         return CurrentPath.Equals(tool.Href, StringComparison.OrdinalIgnoreCase);
     }
 
+    private async Task OnLanguageChanged(ChangeEventArgs args)
+    {
+        var code = args.Value?.ToString() ?? "en";
+        await Text.SetLanguageAsync(code);
+    }
+
     private void ToggleMenu()
     {
         IsMenuOpen = !IsMenuOpen;
@@ -102,18 +141,19 @@
 
     private string GetCurrentToolName()
     {
-        return Tools.FirstOrDefault(IsCurrentTool)?.Name ?? "Tools";
+        return Tools.FirstOrDefault(IsCurrentTool) is { } tool ? Text[tool.LabelKey] : Text["app.tools"];
     }
 
     public void Dispose()
     {
         NavigationManager.LocationChanged -= OnLocationChanged;
+        Text.Changed -= OnTextChanged;
     }
 
     private class ToolItem
     {
         public string Id { get; set; } = string.Empty;
-        public string Name { get; set; } = string.Empty;
+        public string LabelKey { get; set; } = string.Empty;
         public string Icon { get; set; } = string.Empty;
         public string Href { get; set; } = "/";
     }

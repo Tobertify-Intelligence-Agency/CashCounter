@@ -1,67 +1,70 @@
 @using System.Globalization
 @using CashCount.Shared.Models
 @using CashCount.Shared.Services
+@using CashCount.Shared.Services.Localization
 @inject IStorageService StorageService
+@inject IAppTextService Text
+@implements IDisposable
 
-<section class="af-management-shell">
-    <div class="af-header-card af-management-header">
+<section class="af-management-shell af-management-shell-minimal">
+    <section class="af-header-card af-management-header af-management-header-minimal">
         <div>
-            <p class="af-eyebrow">Account management</p>
-            <h2>Accounts & funds setup</h2>
-            <p class="af-subtitle">Set up pots, bank accounts, and fund buckets here. The Funds page stays focused on summaries and fast transaction logging.</p>
+            <p class="af-eyebrow">@Text["ledger.hero.eyebrow"]</p>
+            <h2>@Text["ledger.hero.title"]</h2>
+            <p class="af-subtitle">@Text["ledger.hero.body"]</p>
         </div>
 
-        <div class="af-header-actions">
+        <div class="af-header-actions af-header-actions-tight">
             <select class="af-select af-currency-select" @onchange="OnCurrencyChanged">
                 @foreach (var currency in _currencies)
                 {
                     <option value="@currency.Symbol" selected="@(_ledger.CurrencySymbol == currency.Symbol)">@currency.Label</option>
                 }
             </select>
-            <button class="btn-save af-header-cta" @onclick="OpenAccountModal">+ Account / fund</button>
-            <button class="btn-clear" @onclick="ResetLedger" disabled="@(!_ledger.Accounts.Any() && !_ledger.Transactions.Any())">Reset tracker</button>
+            <button class="btn-save af-header-cta" @onclick="OpenAccountModal">@Text["ledger.create"]</button>
+            <button class="btn-clear" @onclick="ResetLedger" disabled="@(!_ledger.Accounts.Any() && !_ledger.Transactions.Any())">@Text["ledger.reset"]</button>
         </div>
-    </div>
+    </section>
 
-    <div class="af-dashboard-grid af-dashboard-grid-compact">
+    <div class="af-dashboard-grid af-dashboard-grid-compact af-dashboard-grid-minimal">
         <div class="af-stat-card primary">
-            <span class="af-stat-label">Tracked accounts</span>
+            <span class="af-stat-label">@Text["ledger.stats.accounts"]</span>
             <strong>@_ledger.Accounts.Count</strong>
-            <small>@FormatAmount(_ledger.TotalBalance) live balance</small>
+            <small>@Text.Format("ledger.stats.liveBalance", FormatAmount(_ledger.TotalBalance))</small>
         </div>
         <div class="af-stat-card neutral">
-            <span class="af-stat-label">Opening balance</span>
+            <span class="af-stat-label">@Text["ledger.stats.opening"]</span>
             <strong>@FormatAmount(_ledger.TotalOpeningBalance)</strong>
-            <small>Across all accounts</small>
+            <small>@Text["ledger.stats.openingBody"]</small>
         </div>
         <div class="af-stat-card success">
-            <span class="af-stat-label">Transactions logged</span>
+            <span class="af-stat-label">@Text["ledger.stats.transactions"]</span>
             <strong>@_ledger.Transactions.Count</strong>
-            <small>Use Funds for daily entries</small>
+            <small>@Text["ledger.stats.transactionsBody"]</small>
         </div>
     </div>
 
-    <div class="af-content-grid af-management-grid">
-        <section class="af-panel">
-            <div class="af-panel-header">
+    <div class="af-content-grid af-management-grid af-management-grid-minimal">
+        <section class="af-panel af-panel-dense">
+            <div class="af-panel-header af-panel-header-minimalized">
                 <div>
-                    <h3>Accounts & funds</h3>
-                    <p>Add each account once, then keep balances updated from the Funds dashboard.</p>
+                    <h3>@Text["ledger.accounts.title"]</h3>
+                    <p>@Text["ledger.accounts.body"]</p>
                 </div>
                 <div class="af-panel-actions">
-                    <span class="count-badge">@_ledger.Accounts.Count total</span>
+                    <span class="count-badge">@Text.Format("ledger.accounts.total", _ledger.Accounts.Count)</span>
                     <button class="btn-save af-inline-action" @onclick="OpenAccountModal">+ Add</button>
                 </div>
             </div>
 
             @if (_ledger.Accounts.Any())
             {
-                <div class="af-account-list">
-                    @foreach (var account in _ledger.Accounts.OrderBy(a => a.Name))
+                <div class="af-account-list af-account-list-compact">
+                    @foreach (var account in _ledger.Accounts.OrderByDescending(a => _ledger.GetAccountBalance(a.Id)).ThenBy(a => a.Name))
                     {
                         var balance = _ledger.GetAccountBalance(account.Id);
-                        <div class="af-account-card">
-                            <div class="af-account-main">
+                        <div class="af-account-card af-account-card-compact">
+                            <div class="af-account-main af-account-main-compact">
                                 <div>
                                     <div class="af-account-title-row">
                                         <strong>@account.Name</strong>
@@ -71,15 +74,15 @@
                                     {
                                         <p class="af-account-note">@account.Notes</p>
                                     }
+                                    <div class="af-account-meta af-account-meta-compact">
+                                        <span>@Text.Format("ledger.account.opening", FormatAmount(account.OpeningBalance))</span>
+                                        <span>@Text.Format("ledger.account.transactions", _ledger.GetTransactionCount(account.Id))</span>
+                                    </div>
                                 </div>
-                                <div class="af-account-balance @(balance >= 0 ? "positive" : "negative")">@FormatAmount(balance)</div>
-                            </div>
-                            <div class="af-account-meta">
-                                <span>Opening @FormatAmount(account.OpeningBalance)</span>
-                                <span>@_ledger.GetTransactionCount(account.Id) tx</span>
-                            </div>
-                            <div class="af-account-actions">
-                                <button class="btn-delete-single" @onclick="() => DeleteAccount(account.Id)">Delete</button>
+                                <div class="af-account-actions-stack">
+                                    <div class="af-account-balance @(balance >= 0 ? "positive" : "negative")">@FormatAmount(balance)</div>
+                                    <button class="btn-delete-single" @onclick="() => DeleteAccount(account.Id)">@Text["app.delete"]</button>
+                                </div>
                             </div>
                         </div>
                     }
@@ -87,53 +90,53 @@
             }
             else
             {
-                <div class="tc-empty-state af-inline-empty">
+                <div class="tc-empty-state af-inline-empty af-inline-empty-card">
                     <span class="tc-empty-icon">🏦</span>
-                    <p>No accounts yet. Start with the cash box, main bank account, or a fund bucket.</p>
-                    <button class="btn-save af-empty-action" @onclick="OpenAccountModal">Create first account</button>
+                    <p>@Text["ledger.empty.body"]</p>
+                    <button class="btn-save af-empty-action" @onclick="OpenAccountModal">@Text["ledger.empty.action"]</button>
                 </div>
             }
         </section>
 
-        <section class="af-panel af-management-side-panel">
-            <div class="af-panel-header">
+        <section class="af-panel af-management-side-panel af-panel-dense">
+            <div class="af-panel-header af-panel-header-minimalized">
                 <div>
-                    <h3>How this MVP works</h3>
-                    <p>Keep setup here, and keep daily usage on the Funds page.</p>
+                    <h3>@Text["ledger.guide.title"]</h3>
+                    <p>@Text["ledger.guide.body"]</p>
                 </div>
             </div>
 
-            <div class="af-management-notes">
+            <div class="af-management-notes af-management-notes-tight">
                 <div class="af-management-note">
-                    <span class="af-summary-label">1. Set up accounts</span>
-                    <p>Add the places you want to track: cash, bank, savings, investment, or fund buckets.</p>
+                    <span class="af-summary-label">@Text["ledger.step1.title"]</span>
+                    <p>@Text["ledger.step1.body"]</p>
                 </div>
                 <div class="af-management-note">
-                    <span class="af-summary-label">2. Log movements in Funds</span>
-                    <p>Use the quick transaction popup on the Funds page for incoming and outgoing entries.</p>
+                    <span class="af-summary-label">@Text["ledger.step2.title"]</span>
+                    <p>@Text["ledger.step2.body"]</p>
                 </div>
                 <div class="af-management-note">
-                    <span class="af-summary-label">3. Reset carefully</span>
-                    <p>Reset clears all accounts and transactions in this local tracker. Use it only when starting over.</p>
+                    <span class="af-summary-label">@Text["ledger.step3.title"]</span>
+                    <p>@Text["ledger.step3.body"]</p>
                 </div>
             </div>
 
             <div class="af-panel-summary af-panel-summary-dense">
                 <div>
-                    <span class="af-summary-label">Current currency</span>
+                    <span class="af-summary-label">@Text["ledger.currentCurrency"]</span>
                     <strong>@_ledger.CurrencySymbol</strong>
                 </div>
                 <div>
-                    <span class="af-summary-label">Latest transaction</span>
-                    <strong>@(_ledger.Transactions.OrderByDescending(t => t.Date).FirstOrDefault()?.Date.ToString("dd.MM.yyyy") ?? "—")</strong>
+                    <span class="af-summary-label">@Text["ledger.latestTransaction"]</span>
+                    <strong>@(_ledger.Transactions.OrderByDescending(t => t.Date).FirstOrDefault()?.Date.ToString("d", Text.CurrentCulture) ?? "—")</strong>
                 </div>
                 <div>
-                    <span class="af-summary-label">Where to work next</span>
-                    <strong>@(_ledger.Accounts.Any() ? "Funds dashboard" : "Create accounts here")</strong>
+                    <span class="af-summary-label">@Text["ledger.nextAction"]</span>
+                    <strong>@(_ledger.Accounts.Any() ? Text["ledger.nextAction.funds"] : Text["ledger.nextAction.create"])</strong>
                 </div>
             </div>
 
-            <a class="btn-clear af-link-btn af-management-link" href="/funds">Open Funds dashboard</a>
+            <a class="btn-clear af-link-btn af-management-link" href="/funds">@Text["ledger.openFunds"]</a>
         </section>
     </div>
 </section>
@@ -144,28 +147,28 @@
         <div class="af-modal-card" @onclick:stopPropagation="true">
             <div class="af-modal-header">
                 <div>
-                    <p class="af-modal-eyebrow">New account</p>
-                    <h3>Add account or fund</h3>
-                    <p>Create a pot once, then track all flow against it.</p>
+                    <p class="af-modal-eyebrow">@Text["ledger.modal.eyebrow"]</p>
+                    <h3>@Text["ledger.modal.title"]</h3>
+                    <p>@Text["ledger.modal.body"]</p>
                 </div>
                 <button class="af-modal-close" @onclick="CloseAccountModal" aria-label="Close">✕</button>
             </div>
 
             <div class="af-form-grid compact">
-                <input class="tc-input" @bind="_newAccount.Name" @bind:event="oninput" placeholder="Account name" />
+                <input class="tc-input" @bind="_newAccount.Name" @bind:event="oninput" placeholder="@Text["ledger.field.accountName"]" />
                 <select class="af-select" @bind="_newAccount.Kind">
                     @foreach (var kind in Enum.GetValues<AccountKind>())
                     {
                         <option value="@kind">@kind</option>
                     }
                 </select>
-                <input class="tc-input" type="number" min="0" step="0.01" @bind="_newAccountOpeningBalance" @bind:event="oninput" placeholder="Opening balance" />
-                <input class="tc-input" @bind="_newAccount.Notes" @bind:event="oninput" placeholder="Optional note" />
+                <input class="tc-input" type="number" min="0" step="0.01" @bind="_newAccountOpeningBalance" @bind:event="oninput" placeholder="@Text["ledger.field.openingBalance"]" />
+                <input class="tc-input" @bind="_newAccount.Notes" @bind:event="oninput" placeholder="@Text["ledger.field.note"]" />
             </div>
 
             <div class="af-modal-actions">
-                <button class="btn-clear" @onclick="CloseAccountModal">Cancel</button>
-                <button class="btn-save" @onclick="AddAccount" disabled="@(!CanAddAccount)">Create account</button>
+                <button class="btn-clear" @onclick="CloseAccountModal">@Text["app.cancel"]</button>
+                <button class="btn-save" @onclick="AddAccount" disabled="@(!CanAddAccount)">@Text["ledger.createButton"]</button>
             </div>
         </div>
     </div>
@@ -189,22 +192,18 @@
 
     protected override async Task OnInitializedAsync()
     {
+        Text.Changed += OnTextChanged;
         _ledger = await StorageService.GetAccountLedgerAsync();
     }
+
+    private void OnTextChanged() => InvokeAsync(StateHasChanged);
 
     private bool CanAddAccount =>
         !string.IsNullOrWhiteSpace(_newAccount.Name) &&
         decimal.TryParse(_newAccountOpeningBalance, NumberStyles.Any, CultureInfo.InvariantCulture, out _);
 
-    private void OpenAccountModal()
-    {
-        _showAccountModal = true;
-    }
-
-    private void CloseAccountModal()
-    {
-        _showAccountModal = false;
-    }
+    private void OpenAccountModal() => _showAccountModal = true;
+    private void CloseAccountModal() => _showAccountModal = false;
 
     private async Task AddAccount()
     {
@@ -256,6 +255,11 @@
 
     private string FormatAmount(decimal amount)
     {
-        return $"{_ledger.CurrencySymbol} {amount.ToString("N2", CultureInfo.InvariantCulture)}";
+        return $"{_ledger.CurrencySymbol} {amount.ToString("N2", Text.CurrentCulture)}";
+    }
+
+    public void Dispose()
+    {
+        Text.Changed -= OnTextChanged;
     }
 }

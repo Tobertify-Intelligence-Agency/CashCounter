@@ -40,6 +40,7 @@ public static class MauiProgram
 		// Register other services
 		builder.Services.AddScoped<IStorageService, LocalStorageService>();
 		builder.Services.AddScoped<IPremiumService, PremiumService>();
+		builder.Services.AddScoped<IAppTextService, AppTextService>();
 
 #if DEBUG
 		builder.Services.AddBlazorWebViewDeveloperTools();
