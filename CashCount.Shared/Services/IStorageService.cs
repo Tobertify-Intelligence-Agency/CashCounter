@@ -15,4 +15,8 @@ public interface IStorageService
     Task SaveTripAsync(TravelCollection trip);
     Task DeleteTripAsync(string id);
     Task ClearAllTripsAsync();
+
+    Task<AccountLedger> GetAccountLedgerAsync();
+    Task SaveAccountLedgerAsync(AccountLedger ledger);
+    Task ClearAccountLedgerAsync();
 }

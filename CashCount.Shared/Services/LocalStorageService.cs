@@ -70,6 +70,7 @@ public class LocalStorageService : IStorageService
     }
 
     private const string TripsStorageKey = "cashcount_saved_trips";
+    private const string AccountLedgerStorageKey = "cashcount_account_ledger";
 
     public async Task<List<TravelCollection>> GetSavedTripsAsync()
     {
@@ -119,5 +120,33 @@ public class LocalStorageService : IStorageService
     public async Task ClearAllTripsAsync()
     {
         await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", TripsStorageKey);
+    }
+
+    public async Task<AccountLedger> GetAccountLedgerAsync()
+    {
+        try
+        {
+            var json = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", AccountLedgerStorageKey);
+            if (string.IsNullOrWhiteSpace(json))
+                return new AccountLedger();
+
+            return JsonSerializer.Deserialize<AccountLedger>(json) ?? new AccountLedger();
+        }
+        catch
+        {
+            return new AccountLedger();
+        }
+    }
+
+    public async Task SaveAccountLedgerAsync(AccountLedger ledger)
+    {
+        ledger.Touch();
+        var json = JsonSerializer.Serialize(ledger);
+        await _jsRuntime.InvokeVoidAsync("localStorage.setItem", AccountLedgerStorageKey, json);
+    }
+
+    public async Task ClearAccountLedgerAsync()
+    {
+        await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", AccountLedgerStorageKey);
     }
 }
