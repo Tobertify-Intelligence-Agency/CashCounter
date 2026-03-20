@@ -13,8 +13,6 @@
                 <span>Net @FormatSignedAmount(_ledger.NetFlow)</span>
             </div>
         </div>
-
-        <a class="btn-clear af-link-btn af-manage-link" href="/account">Manage accounts</a>
     </section>
 
     @if (!_ledger.Accounts.Any())
@@ -32,14 +30,16 @@
     }
     else
     {
-        <section class="af-panel af-accounts-panel af-accounts-panel-compact">
-            <div class="af-section-heading-row">
-                <div>
-                    <h3>Accounts</h3>
-                    <p>Live balances first.</p>
+        <details class="af-panel af-collapsible-panel" open>
+            <summary class="af-collapsible-summary">
+                <div class="af-section-heading-row af-collapsible-heading">
+                    <div>
+                        <h3>Accounts</h3>
+                        <p>Live balances first.</p>
+                    </div>
+                    <span class="count-badge">@_ledger.CurrencySymbol default</span>
                 </div>
-                <span class="count-badge">@_ledger.CurrencySymbol default</span>
-            </div>
+            </summary>
 
             <div class="af-account-list af-account-list-compact">
                 @foreach (var account in SortedAccounts)
@@ -54,7 +54,6 @@
                                 </div>
                                 <div class="af-account-meta af-account-meta-compact">
                                     <span>@_ledger.GetTransactionCount(account.Id) tx</span>
-                                    <span>Open @FormatAmount(account.OpeningBalance)</span>
                                 </div>
                             </div>
                             <div class="af-account-balance @(balance >= 0 ? "positive" : "negative")">@FormatAmount(balance)</div>
@@ -62,16 +61,18 @@
                     </div>
                 }
             </div>
-        </section>
+        </details>
 
-        <section class="af-panel af-visual-panel">
-            <div class="af-section-heading-row af-section-heading-row-tight">
-                <div>
-                    <h3>Flow</h3>
-                    <p>Income, expenses, and balance at a glance.</p>
+        <details class="af-panel af-visual-panel af-collapsible-panel" open>
+            <summary class="af-collapsible-summary">
+                <div class="af-section-heading-row af-section-heading-row-tight af-collapsible-heading">
+                    <div>
+                        <h3>Flow</h3>
+                        <p>Income, expenses, and balance at a glance.</p>
+                    </div>
+                    <div class="af-flow-badge @( _ledger.NetFlow >= 0 ? "positive" : "negative")">@FormatSignedAmount(_ledger.NetFlow)</div>
                 </div>
-                <div class="af-flow-badge @( _ledger.NetFlow >= 0 ? "positive" : "negative")">@FormatSignedAmount(_ledger.NetFlow)</div>
-            </div>
+            </summary>
 
             <div class="af-visual-grid">
                 <div class="af-visual-card incoming">
@@ -95,11 +96,7 @@
                 <div class="af-visual-card balance">
                     <span class="af-summary-label">Balance</span>
                     <strong class="@(_ledger.TotalBalance >= 0 ? "positive" : "negative")">@FormatAmount(_ledger.TotalBalance)</strong>
-                    <div class="af-balance-split">
-                        <div>
-                            <span class="af-summary-label">Opening</span>
-                            <strong>@FormatAmount(_ledger.TotalOpeningBalance)</strong>
-                        </div>
+                    <div class="af-balance-split af-balance-split-single">
                         <div>
                             <span class="af-summary-label">Activity</span>
                             <strong class="@(_ledger.NetFlow >= 0 ? "positive" : "negative")">@FormatSignedAmount(_ledger.NetFlow)</strong>
@@ -107,34 +104,54 @@
                     </div>
                 </div>
             </div>
-        </section>
+        </details>
     }
 
     <div class="af-content-grid bottom af-content-grid-minimal">
-        <section class="af-panel">
-            <div class="af-panel-header af-panel-header-minimal">
-                <div>
-                    <h3>Category overview</h3>
-                    <p>Where money comes from and where it goes.</p>
+        <details class="af-panel af-collapsible-panel" open>
+            <summary class="af-collapsible-summary">
+                <div class="af-panel-header af-panel-header-minimal af-collapsible-heading">
+                    <div>
+                        <h3>Category overview</h3>
+                        <p>Where money comes from and where it goes.</p>
+                    </div>
                 </div>
-            </div>
+            </summary>
 
             @if (CategorySummaries.Any())
             {
-                <div class="af-category-list">
-                    @foreach (var category in CategorySummaries.Take(8))
-                    {
-                        <div class="af-category-item">
-                            <div>
-                                <strong>@category.Category</strong>
-                                <div class="af-category-meta">
-                                    <span class="positive">In @FormatAmount(category.Incoming)</span>
-                                    <span class="negative">Out @FormatAmount(category.Outgoing)</span>
+                <div class="af-category-overview-grid">
+                    <div class="af-category-chart-card">
+                        <div class="af-category-donut-shell">
+                            <div class="af-category-donut" style="background:@CategoryChartStyle;">
+                                <div class="af-category-donut-hole">
+                                    <span class="af-summary-label">Tracked</span>
+                                    <strong>@VisibleCategorySummaries.Count</strong>
+                                    <small>categories</small>
                                 </div>
                             </div>
-                            <div class="af-category-net @(category.Net >= 0 ? "positive" : "negative")">@FormatSignedAmount(category.Net)</div>
                         </div>
-                    }
+                    </div>
+
+                    <div class="af-category-list af-category-list-chart">
+                        @foreach (var category in VisibleCategorySummaries)
+                        {
+                            <div class="af-category-item">
+                                <div class="af-category-main">
+                                    <div class="af-category-title-row">
+                                        <span class="af-category-swatch" style="background:@GetCategoryColor(category.Category)"></span>
+                                        <strong>@category.Category</strong>
+                                    </div>
+                                    <div class="af-category-meta">
+                                        <span>@FormatPercent(CategoryShare(category)) of activity</span>
+                                        <span class="positive">In @FormatAmount(category.Incoming)</span>
+                                        <span class="negative">Out @FormatAmount(category.Outgoing)</span>
+                                    </div>
+                                </div>
+                                <div class="af-category-net @(category.Net >= 0 ? "positive" : "negative")">@FormatSignedAmount(category.Net)</div>
+                            </div>
+                        }
+                    </div>
                 </div>
             }
             else
@@ -144,16 +161,18 @@
                     <p>Categories appear once transactions start using them.</p>
                 </div>
             }
-        </section>
+        </details>
 
-        <section class="af-panel">
-            <div class="af-panel-header af-panel-header-minimal">
-                <div>
-                    <h3>Recent</h3>
-                    <p>Latest movements across all tracked accounts.</p>
+        <details class="af-panel af-collapsible-panel" open>
+            <summary class="af-collapsible-summary">
+                <div class="af-panel-header af-panel-header-minimal af-collapsible-heading">
+                    <div>
+                        <h3>Recent</h3>
+                        <p>Latest movements across all tracked accounts.</p>
+                    </div>
+                    <span class="count-badge">@_ledger.Transactions.Count total</span>
                 </div>
-                <span class="count-badge">@_ledger.Transactions.Count total</span>
-            </div>
+            </summary>
 
             @if (_ledger.Transactions.Any())
             {
@@ -195,7 +214,7 @@
                     <p>No transactions yet. Use the add button to log the first movement.</p>
                 </div>
             }
-        </section>
+        </details>
     </div>
 
     @if (_ledger.Accounts.Any())
@@ -271,6 +290,11 @@
         "Eating Out", "Supplies", "Fees", "Savings", "Investment", "Emergency", "Travel", "Misc"
     };
 
+    private static readonly string[] _categoryPalette =
+    {
+        "#2563eb", "#14b8a6", "#f97316", "#8b5cf6", "#ec4899", "#22c55e", "#eab308", "#06b6d4"
+    };
+
     protected override async Task OnInitializedAsync()
     {
         _ledger = await StorageService.GetAccountLedgerAsync();
@@ -292,6 +316,8 @@
         .ThenByDescending(t => t.Id)
         .Take(12);
 
+    private IReadOnlyList<CategorySummary> VisibleCategorySummaries => CategorySummaries.Take(5).ToList();
+
     private IEnumerable<CategorySummary> CategorySummaries => _ledger.GetCategorySummaries();
 
     private IEnumerable<string> SuggestedCategories => _defaultCategories
@@ -300,8 +326,10 @@
         .OrderBy(category => category);
 
     private decimal ActivityMax => Math.Max(_ledger.TotalIncoming, _ledger.TotalOutgoing);
+    private decimal CategoryActivityTotal => VisibleCategorySummaries.Sum(category => category.TotalActivity);
     private string IncomeFillPercent => ActivityMax <= 0 ? "0" : ((double)(_ledger.TotalIncoming / ActivityMax) * 100d).ToString("0.#", CultureInfo.InvariantCulture);
     private string OutgoingFillPercent => ActivityMax <= 0 ? "0" : ((double)(_ledger.TotalOutgoing / ActivityMax) * 100d).ToString("0.#", CultureInfo.InvariantCulture);
+    private string CategoryChartStyle => BuildCategoryChartStyle();
 
     private bool CanAddTransaction =>
         !string.IsNullOrWhiteSpace(_newTransaction.AccountId) &&
@@ -383,6 +411,46 @@
         await StorageService.SaveAccountLedgerAsync(_ledger);
     }
 
+    private decimal CategoryShare(CategorySummary category)
+    {
+        if (CategoryActivityTotal <= 0)
+            return 0m;
+
+        return category.TotalActivity / CategoryActivityTotal;
+    }
+
+    private string GetCategoryColor(string category)
+    {
+        var index = VisibleCategorySummaries.Select(summary => summary.Category).ToList().FindIndex(name => name.Equals(category, StringComparison.OrdinalIgnoreCase));
+        if (index < 0)
+            index = 0;
+
+        return _categoryPalette[index % _categoryPalette.Length];
+    }
+
+    private string BuildCategoryChartStyle()
+    {
+        if (!VisibleCategorySummaries.Any() || CategoryActivityTotal <= 0)
+            return "conic-gradient(#e2e8f0 0 100%)";
+
+        var segments = new List<string>();
+        decimal start = 0m;
+
+        for (var i = 0; i < VisibleCategorySummaries.Count; i++)
+        {
+            var category = VisibleCategorySummaries[i];
+            var share = CategoryShare(category);
+            var end = i == VisibleCategorySummaries.Count - 1 ? 1m : start + share;
+
+            var startPercent = (start * 100m).ToString("0.##", CultureInfo.InvariantCulture);
+            var endPercent = (end * 100m).ToString("0.##", CultureInfo.InvariantCulture);
+            segments.Add($"{GetCategoryColor(category.Category)} {startPercent}% {endPercent}%");
+            start = end;
+        }
+
+        return $"conic-gradient({string.Join(", ", segments)})";
+    }
+
     private string FormatAmount(decimal amount, bool includeCurrency = true)
     {
         var number = amount.ToString("N2", CultureInfo.InvariantCulture);
@@ -393,5 +461,10 @@
     {
         var prefix = amount >= 0 ? "+" : "-";
         return $"{prefix}{_ledger.CurrencySymbol} {Math.Abs(amount).ToString("N2", CultureInfo.InvariantCulture)}";
+    }
+
+    private string FormatPercent(decimal value)
+    {
+        return value.ToString("P0", CultureInfo.InvariantCulture);
     }
 }

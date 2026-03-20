@@ -2664,6 +2664,43 @@
     white-space: nowrap;
 }
 
+.af-collapsible-panel {
+    overflow: hidden;
+}
+
+.af-collapsible-summary {
+    list-style: none;
+    cursor: pointer;
+}
+
+.af-collapsible-summary::-webkit-details-marker {
+    display: none;
+}
+
+.af-collapsible-heading {
+    margin-bottom: 0;
+    position: relative;
+    padding-right: 2rem;
+}
+
+.af-collapsible-heading::after {
+    content: "▾";
+    position: absolute;
+    right: 0;
+    top: 0.15rem;
+    color: var(--text-secondary);
+    font-size: 1rem;
+    transition: transform 0.2s ease;
+}
+
+.af-collapsible-panel:not([open]) .af-collapsible-heading::after {
+    transform: rotate(-90deg);
+}
+
+.af-collapsible-panel[open] .af-collapsible-summary {
+    margin-bottom: 1rem;
+}
+
 .af-accounts-panel-compact,
 .af-visual-panel {
     padding-top: 1rem;
@@ -2753,6 +2790,10 @@
     margin-top: auto;
 }
 
+.af-balance-split-single {
+    grid-template-columns: 1fr;
+}
+
 .af-balance-split > div {
     border-radius: var(--radius-sm);
     background: rgba(255, 255, 255, 0.7);
@@ -2761,6 +2802,81 @@
 
 .af-content-grid-minimal {
     grid-template-columns: 1fr 1fr;
+}
+
+.af-category-overview-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
+    gap: 1rem;
+    align-items: start;
+}
+
+.af-category-chart-card {
+    display: flex;
+    justify-content: center;
+}
+
+.af-category-donut-shell {
+    width: 100%;
+    max-width: 220px;
+    display: flex;
+    justify-content: center;
+}
+
+.af-category-donut {
+    width: 180px;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.06);
+}
+
+.af-category-donut-hole {
+    width: 58%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.06);
+}
+
+.af-category-donut-hole strong {
+    font-size: 1.4rem;
+    line-height: 1;
+    color: var(--text-primary);
+}
+
+.af-category-donut-hole small {
+    color: var(--text-secondary);
+}
+
+.af-category-list-chart {
+    gap: 0.75rem;
+}
+
+.af-category-main {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.af-category-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.af-category-swatch {
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 999px;
+    flex-shrink: 0;
 }
 
 .af-panel-header-minimal {
@@ -2801,7 +2917,8 @@
 
 @media (max-width: 900px) {
     .af-visual-grid,
-    .af-content-grid-minimal {
+    .af-content-grid-minimal,
+    .af-category-overview-grid {
         grid-template-columns: 1fr;
     }
 }
@@ -2814,17 +2931,22 @@
     .af-hero-strip,
     .af-section-heading-row,
     .af-panel-header-minimal,
-    .af-account-main-compact {
+    .af-account-main-compact,
+    .af-category-item {
         flex-direction: column;
         align-items: stretch;
     }
 
-    .af-manage-link {
-        align-self: flex-start;
+    .af-collapsible-heading {
+        padding-right: 1.7rem;
     }
 
     .af-balance-split {
         grid-template-columns: 1fr;
+    }
+
+    .af-category-donut {
+        width: 156px;
     }
 
     .af-fab {
