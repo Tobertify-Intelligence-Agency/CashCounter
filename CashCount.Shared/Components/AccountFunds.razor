@@ -3,50 +3,27 @@
 @using CashCount.Shared.Services
 @inject IStorageService StorageService
 
-<div class="account-funds">
-    <div class="af-header-card af-header-card-dashboard">
+<div class="account-funds account-funds-minimal">
+    <section class="af-hero-strip">
         <div>
-            <p class="af-eyebrow">Funds dashboard</p>
-            <h2>Funds</h2>
-            <p class="af-subtitle">See the big picture first, then log money in or out as it happens. Account setup and maintenance live on the Account page.</p>
+            <p class="af-eyebrow">Funds</p>
+            <div class="af-hero-balance @( _ledger.TotalBalance >= 0 ? "positive" : "negative")">@FormatAmount(_ledger.TotalBalance)</div>
+            <div class="af-hero-meta">
+                <span>@_ledger.Accounts.Count account(s)</span>
+                <span>Net @FormatSignedAmount(_ledger.NetFlow)</span>
+            </div>
         </div>
 
-        <div class="af-header-actions">
-            <a class="btn-clear af-header-cta af-link-btn" href="/account">Manage accounts</a>
-            <button class="tc-btn-add expense af-header-cta" @onclick="() => OpenTransactionModal(CashFlowDirection.Outgoing)" disabled="@(!_ledger.Accounts.Any())">+ Transaction</button>
-        </div>
-    </div>
-
-    <div class="af-dashboard-grid">
-        <div class="af-stat-card primary">
-            <span class="af-stat-label">Total balance</span>
-            <strong>@FormatAmount(_ledger.TotalBalance)</strong>
-            <small>@_ledger.Accounts.Count account(s)</small>
-        </div>
-        <div class="af-stat-card success">
-            <span class="af-stat-label">Incoming</span>
-            <strong>@FormatAmount(_ledger.TotalIncoming)</strong>
-            <small>@_ledger.Transactions.Count(t => t.Direction == CashFlowDirection.Incoming) transaction(s)</small>
-        </div>
-        <div class="af-stat-card warning">
-            <span class="af-stat-label">Outgoing</span>
-            <strong>@FormatAmount(_ledger.TotalOutgoing)</strong>
-            <small>@_ledger.Transactions.Count(t => t.Direction == CashFlowDirection.Outgoing) transaction(s)</small>
-        </div>
-        <div class="af-stat-card neutral">
-            <span class="af-stat-label">Net flow</span>
-            <strong class="@(_ledger.NetFlow >= 0 ? "positive" : "negative")">@FormatSignedAmount(_ledger.NetFlow)</strong>
-            <small>Opening balance @FormatAmount(_ledger.TotalOpeningBalance)</small>
-        </div>
-    </div>
+        <a class="btn-clear af-link-btn af-manage-link" href="/account">Manage accounts</a>
+    </section>
 
     @if (!_ledger.Accounts.Any())
     {
-        <section class="af-panel af-empty-hero">
+        <section class="af-panel af-empty-hero af-minimal-empty">
             <div class="tc-empty-state af-inline-empty af-hero-empty-state">
                 <span class="tc-empty-icon">🏦</span>
                 <h3>No accounts yet</h3>
-                <p>Create your first cash box, bank account, or fund bucket on the Account page. Once that is set up, this dashboard becomes your fast place for summaries and transactions.</p>
+                <p>Create your first cash box, bank account, or fund bucket on the Account page. This screen becomes your fast snapshot once at least one account exists.</p>
                 <div class="af-empty-actions">
                     <a class="btn-save af-link-btn" href="/account">Create first account</a>
                 </div>
@@ -55,116 +32,90 @@
     }
     else
     {
-        <div class="af-content-grid">
-            <section class="af-panel">
-                <div class="af-panel-header">
-                    <div>
-                        <h3>Tracked balances</h3>
-                        <p>Read-only snapshot of every tracked account and fund.</p>
-                    </div>
-                    <div class="af-panel-actions">
-                        <span class="count-badge">@_ledger.CurrencySymbol default</span>
-                        <a class="btn-clear af-inline-action af-link-btn" href="/account">Manage</a>
-                    </div>
+        <section class="af-panel af-accounts-panel af-accounts-panel-compact">
+            <div class="af-section-heading-row">
+                <div>
+                    <h3>Accounts</h3>
+                    <p>Live balances first.</p>
                 </div>
+                <span class="count-badge">@_ledger.CurrencySymbol default</span>
+            </div>
 
-                <div class="af-panel-summary">
-                    <div>
-                        <span class="af-summary-label">Tracked accounts</span>
-                        <strong>@_ledger.Accounts.Count</strong>
-                    </div>
-                    <div>
-                        <span class="af-summary-label">Opening balance</span>
-                        <strong>@FormatAmount(_ledger.TotalOpeningBalance)</strong>
-                    </div>
-                    <div>
-                        <span class="af-summary-label">Live balance</span>
-                        <strong>@FormatAmount(_ledger.TotalBalance)</strong>
-                    </div>
-                </div>
-
-                <div class="af-account-list">
-                    @foreach (var account in _ledger.Accounts.OrderByDescending(a => _ledger.GetAccountBalance(a.Id)).ThenBy(a => a.Name))
-                    {
-                        var balance = _ledger.GetAccountBalance(account.Id);
-                        <div class="af-account-card af-account-card-readonly">
-                            <div class="af-account-main">
-                                <div>
-                                    <div class="af-account-title-row">
-                                        <strong>@account.Name</strong>
-                                        <span class="af-kind-badge">@account.Kind</span>
-                                    </div>
-                                    @if (!string.IsNullOrWhiteSpace(account.Notes))
-                                    {
-                                        <p class="af-account-note">@account.Notes</p>
-                                    }
-                                </div>
-                                <div class="af-account-balance @(balance >= 0 ? "positive" : "negative")">@FormatAmount(balance)</div>
-                            </div>
-                            <div class="af-account-meta">
-                                <span>Opening @FormatAmount(account.OpeningBalance)</span>
-                                <span>@_ledger.GetTransactionCount(account.Id) tx</span>
-                            </div>
-                        </div>
-                    }
-                </div>
-            </section>
-
-            <section class="af-panel">
-                <div class="af-panel-header">
-                    <div>
-                        <h3>Transactions</h3>
-                        <p>Keep the ledger tidy by logging money in or out only when needed.</p>
-                    </div>
-                    <div class="af-panel-actions">
-                        <span class="count-badge">Auto-saved</span>
-                        <button class="tc-btn-add expense af-inline-action" @onclick="() => OpenTransactionModal(CashFlowDirection.Outgoing)">+ Add</button>
-                    </div>
-                </div>
-
-                <div class="af-quick-actions">
-                    <button class="af-quick-action incoming" @onclick="() => OpenTransactionModal(CashFlowDirection.Incoming)">
-                        <span class="af-quick-action-label">Incoming</span>
-                        <strong>Log money in</strong>
-                    </button>
-                    <button class="af-quick-action outgoing" @onclick="() => OpenTransactionModal(CashFlowDirection.Outgoing)">
-                        <span class="af-quick-action-label">Outgoing</span>
-                        <strong>Log money out</strong>
-                    </button>
-                </div>
-
-                <div class="af-panel-summary af-panel-summary-dense">
-                    <div>
-                        <span class="af-summary-label">Transactions</span>
-                        <strong>@_ledger.Transactions.Count</strong>
-                    </div>
-                    <div>
-                        <span class="af-summary-label">Latest entry</span>
-                        <strong>@(RecentTransactions.FirstOrDefault()?.Date.ToString("dd.MM.yyyy") ?? "—")</strong>
-                    </div>
-                    <div>
-                        <span class="af-summary-label">Suggested next step</span>
-                        <strong>@(_ledger.Transactions.Any() ? "Keep logging from the popup" : "Add your first transaction")</strong>
-                    </div>
-                </div>
-
-                @if (!_ledger.Transactions.Any())
+            <div class="af-account-list af-account-list-compact">
+                @foreach (var account in SortedAccounts)
                 {
-                    <div class="tc-empty-state af-inline-empty af-inline-empty-tight">
-                        <span class="tc-empty-icon">💸</span>
-                        <p>No transactions yet. Use the quick actions above to log the first movement.</p>
+                    var balance = _ledger.GetAccountBalance(account.Id);
+                    <div class="af-account-card af-account-card-compact af-account-card-readonly">
+                        <div class="af-account-main af-account-main-compact">
+                            <div>
+                                <div class="af-account-title-row">
+                                    <strong>@account.Name</strong>
+                                    <span class="af-kind-badge">@account.Kind</span>
+                                </div>
+                                <div class="af-account-meta af-account-meta-compact">
+                                    <span>@_ledger.GetTransactionCount(account.Id) tx</span>
+                                    <span>Open @FormatAmount(account.OpeningBalance)</span>
+                                </div>
+                            </div>
+                            <div class="af-account-balance @(balance >= 0 ? "positive" : "negative")">@FormatAmount(balance)</div>
+                        </div>
                     </div>
                 }
-            </section>
-        </div>
+            </div>
+        </section>
+
+        <section class="af-panel af-visual-panel">
+            <div class="af-section-heading-row af-section-heading-row-tight">
+                <div>
+                    <h3>Flow</h3>
+                    <p>Income, expenses, and balance at a glance.</p>
+                </div>
+                <div class="af-flow-badge @( _ledger.NetFlow >= 0 ? "positive" : "negative")">@FormatSignedAmount(_ledger.NetFlow)</div>
+            </div>
+
+            <div class="af-visual-grid">
+                <div class="af-visual-card incoming">
+                    <span class="af-summary-label">Income</span>
+                    <strong>@FormatAmount(_ledger.TotalIncoming)</strong>
+                    <div class="af-meter-track">
+                        <div class="af-meter-fill incoming" style="width:@IncomeFillPercent%"></div>
+                    </div>
+                    <small>@_ledger.Transactions.Count(t => t.Direction == CashFlowDirection.Incoming) entry(s)</small>
+                </div>
+
+                <div class="af-visual-card outgoing">
+                    <span class="af-summary-label">Expenses</span>
+                    <strong>@FormatAmount(_ledger.TotalOutgoing)</strong>
+                    <div class="af-meter-track">
+                        <div class="af-meter-fill outgoing" style="width:@OutgoingFillPercent%"></div>
+                    </div>
+                    <small>@_ledger.Transactions.Count(t => t.Direction == CashFlowDirection.Outgoing) entry(s)</small>
+                </div>
+
+                <div class="af-visual-card balance">
+                    <span class="af-summary-label">Balance</span>
+                    <strong class="@(_ledger.TotalBalance >= 0 ? "positive" : "negative")">@FormatAmount(_ledger.TotalBalance)</strong>
+                    <div class="af-balance-split">
+                        <div>
+                            <span class="af-summary-label">Opening</span>
+                            <strong>@FormatAmount(_ledger.TotalOpeningBalance)</strong>
+                        </div>
+                        <div>
+                            <span class="af-summary-label">Activity</span>
+                            <strong class="@(_ledger.NetFlow >= 0 ? "positive" : "negative")">@FormatSignedAmount(_ledger.NetFlow)</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
     }
 
-    <div class="af-content-grid bottom">
+    <div class="af-content-grid bottom af-content-grid-minimal">
         <section class="af-panel">
-            <div class="af-panel-header">
+            <div class="af-panel-header af-panel-header-minimal">
                 <div>
                     <h3>Category overview</h3>
-                    <p>Quick read on where money comes from and where it goes.</p>
+                    <p>Where money comes from and where it goes.</p>
                 </div>
             </div>
 
@@ -196,9 +147,9 @@
         </section>
 
         <section class="af-panel">
-            <div class="af-panel-header">
+            <div class="af-panel-header af-panel-header-minimal">
                 <div>
-                    <h3>Recent transactions</h3>
+                    <h3>Recent</h3>
                     <p>Latest movements across all tracked accounts.</p>
                 </div>
                 <span class="count-badge">@_ledger.Transactions.Count total</span>
@@ -239,13 +190,20 @@
             }
             else
             {
-                <div class="tc-empty-state af-inline-empty">
+                <div class="tc-empty-state af-inline-empty af-inline-empty-tight">
                     <span class="tc-empty-icon">🧾</span>
-                    <p>No transactions yet.</p>
+                    <p>No transactions yet. Use the add button to log the first movement.</p>
                 </div>
             }
         </section>
     </div>
+
+    @if (_ledger.Accounts.Any())
+    {
+        <button class="af-fab" @onclick="() => OpenTransactionModal(CashFlowDirection.Outgoing)" aria-label="Add transaction">
+            <span>+</span>
+        </button>
+    }
 </div>
 
 @if (_showTransactionModal)
@@ -325,6 +283,10 @@
         PrepareNewTransaction();
     }
 
+    private IEnumerable<TrackedAccount> SortedAccounts => _ledger.Accounts
+        .OrderByDescending(a => _ledger.GetAccountBalance(a.Id))
+        .ThenBy(a => a.Name);
+
     private IEnumerable<AccountTransaction> RecentTransactions => _ledger.Transactions
         .OrderByDescending(t => t.Date)
         .ThenByDescending(t => t.Id)
@@ -336,6 +298,10 @@
         .Concat(_ledger.Transactions.Where(t => !string.IsNullOrWhiteSpace(t.Category)).Select(t => t.Category.Trim()))
         .Distinct(StringComparer.OrdinalIgnoreCase)
         .OrderBy(category => category);
+
+    private decimal ActivityMax => Math.Max(_ledger.TotalIncoming, _ledger.TotalOutgoing);
+    private string IncomeFillPercent => ActivityMax <= 0 ? "0" : ((double)(_ledger.TotalIncoming / ActivityMax) * 100d).ToString("0.#", CultureInfo.InvariantCulture);
+    private string OutgoingFillPercent => ActivityMax <= 0 ? "0" : ((double)(_ledger.TotalOutgoing / ActivityMax) * 100d).ToString("0.#", CultureInfo.InvariantCulture);
 
     private bool CanAddTransaction =>
         !string.IsNullOrWhiteSpace(_newTransaction.AccountId) &&
