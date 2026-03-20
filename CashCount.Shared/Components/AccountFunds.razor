@@ -1,6 +1,7 @@
 @using System.Globalization
 @using CashCount.Shared.Models
 @using CashCount.Shared.Services
+@using Microsoft.AspNetCore.Components.Forms
 @inject IStorageService StorageService
 
 <div class="account-funds account-funds-minimal">
@@ -184,9 +185,17 @@
                             <div class="tc-entry-type-bar"></div>
                             <div class="tc-entry-body">
                                 <div class="tc-entry-top">
-                                    <div>
-                                        <span class="tc-entry-desc">@transaction.Description</span>
-                                        <div class="af-transaction-account">@accountName</div>
+                                    <div class="af-transaction-main">
+                                        <div>
+                                            <span class="tc-entry-desc">@transaction.Description</span>
+                                            <div class="af-transaction-account">@accountName</div>
+                                        </div>
+                                        @if (transaction.HasAttachment)
+                                        {
+                                            <div class="af-transaction-attachment-preview">
+                                                <img src="@transaction.AttachmentDataUrl" alt="Attachment for @transaction.Description" class="af-transaction-thumb" />
+                                            </div>
+                                        }
                                     </div>
                                     <span class="tc-entry-amount @(transaction.Direction == CashFlowDirection.Incoming ? "income" : "expense")">
                                         @(transaction.Direction == CashFlowDirection.Incoming ? "+" : "-")@FormatAmount(transaction.Amount, includeCurrency: false)
@@ -197,6 +206,10 @@
                                         @if (!string.IsNullOrWhiteSpace(transaction.Category))
                                         {
                                             <span class="tc-entry-category">@transaction.Category</span>
+                                        }
+                                        @if (transaction.HasAttachment)
+                                        {
+                                            <span class="af-attachment-chip">Photo</span>
                                         }
                                         <span class="tc-entry-date">@transaction.Date.ToString("dd.MM.yyyy")</span>
                                     </span>
@@ -229,20 +242,17 @@
 {
     <div class="af-modal-backdrop" @onclick="CloseTransactionModal">
         <div class="af-modal-card af-modal-card-wide" @onclick:stopPropagation="true">
-            <div class="af-modal-header">
-                <div>
-                    <p class="af-modal-eyebrow">New transaction</p>
-                    <h3>Log money movement</h3>
-                    <p>Attach every incoming or outgoing movement to one tracked account.</p>
-                </div>
-                <button class="af-modal-close" @onclick="CloseTransactionModal" aria-label="Close">✕</button>
+            <div class="af-modal-header af-modal-header-simple">
+                <h3>Add transaction</h3>
             </div>
 
-            <div class="tc-type-toggle">
-                <button class="tc-type-btn @(_newTransaction.Direction == CashFlowDirection.Outgoing ? "active expense" : "")"
-                        @onclick='() => _newTransaction.Direction = CashFlowDirection.Outgoing'>Outgoing</button>
-                <button class="tc-type-btn @(_newTransaction.Direction == CashFlowDirection.Incoming ? "active income" : "")"
-                        @onclick='() => _newTransaction.Direction = CashFlowDirection.Incoming'>Incoming</button>
+            <div class="tc-segmented-toggle" role="group" aria-label="Transaction type">
+                <button type="button"
+                        class="tc-segmented-btn @(_newTransaction.Direction == CashFlowDirection.Outgoing ? "active expense" : string.Empty)"
+                        @onclick='() => SetTransactionDirection(CashFlowDirection.Outgoing)'>Outgoing</button>
+                <button type="button"
+                        class="tc-segmented-btn @(_newTransaction.Direction == CashFlowDirection.Incoming ? "active income" : string.Empty)"
+                        @onclick='() => SetTransactionDirection(CashFlowDirection.Incoming)'>Incoming</button>
             </div>
 
             <div class="af-form-grid">
@@ -258,6 +268,58 @@
                 <input class="tc-input" type="date" @bind="_newTransaction.Date" @bind:event="oninput" />
                 <input class="tc-input" @bind="_newTransaction.Notes" @bind:event="oninput" placeholder="Optional note" />
             </div>
+
+            <section class="af-attachment-section">
+                <div class="af-attachment-header">
+                    <div>
+                        <h4>Picture</h4>
+                        <p>One optional image, resized before saving.</p>
+                    </div>
+                    @if (_newTransaction.HasAttachment)
+                    {
+                        <span class="af-attachment-chip">Attached</span>
+                    }
+                </div>
+
+                <div class="af-attachment-inputs" @key="_attachmentInputVersion">
+                    <InputFile id="transaction-photo-picker"
+                               class="af-hidden-file-input"
+                               OnChange="HandleAttachmentSelected"
+                               accept="image/*" />
+                    <InputFile id="transaction-camera-picker"
+                               class="af-hidden-file-input"
+                               OnChange="HandleAttachmentSelected"
+                               accept="image/*"
+                               capture="environment" />
+                </div>
+
+                @if (_newTransaction.HasAttachment)
+                {
+                    <div class="af-attachment-preview-card">
+                        <img src="@_newTransaction.AttachmentDataUrl" alt="Selected transaction picture" class="af-attachment-preview-image" />
+                        <div class="af-attachment-actions">
+                            <label class="btn-save af-file-action" for="transaction-photo-picker">Replace picture</label>
+                            <label class="btn-clear af-file-action" for="transaction-camera-picker">Take new</label>
+                            <button type="button" class="btn-clear" @onclick="RemoveAttachment">Remove</button>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="af-attachment-empty">
+                        <p>Add a receipt, invoice, or reference photo.</p>
+                        <div class="af-attachment-actions">
+                            <label class="btn-save af-file-action" for="transaction-photo-picker">Choose file / gallery</label>
+                            <label class="btn-clear af-file-action" for="transaction-camera-picker">Use camera</label>
+                        </div>
+                    </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(_attachmentError))
+                {
+                    <p class="af-form-error">@_attachmentError</p>
+                }
+            </section>
 
             <datalist id="transaction-categories">
                 @foreach (var category in SuggestedCategories)
@@ -279,10 +341,15 @@
 }
 
 @code {
+    private const long MaxAttachmentBytes = 600 * 1024;
+    private const int AttachmentMaxDimension = 1280;
+
     private AccountLedger _ledger = new();
     private AccountTransaction _newTransaction = new();
     private string _newTransactionAmount = string.Empty;
     private bool _showTransactionModal;
+    private string? _attachmentError;
+    private int _attachmentInputVersion;
 
     private static readonly string[] _defaultCategories =
     {
@@ -347,13 +414,87 @@
             PrepareNewTransaction();
         }
 
+        _attachmentError = null;
         _newTransaction.Direction = direction;
         _showTransactionModal = true;
     }
 
     private void CloseTransactionModal()
     {
+        _attachmentError = null;
         _showTransactionModal = false;
+    }
+
+    private void SetTransactionDirection(CashFlowDirection direction)
+    {
+        _newTransaction.Direction = direction;
+    }
+
+    private async Task HandleAttachmentSelected(InputFileChangeEventArgs args)
+    {
+        _attachmentError = null;
+
+        var file = args.File;
+        if (file is null)
+            return;
+
+        if (!file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        {
+            _attachmentError = "Please select an image file.";
+            ResetAttachmentPicker();
+            return;
+        }
+
+        try
+        {
+            var processedFile = await file.RequestImageFileAsync("image/jpeg", AttachmentMaxDimension, AttachmentMaxDimension);
+            await using var stream = processedFile.OpenReadStream(MaxAttachmentBytes);
+            await using var memoryStream = new MemoryStream();
+            await stream.CopyToAsync(memoryStream);
+
+            if (memoryStream.Length == 0)
+            {
+                _attachmentError = "The selected image could not be read.";
+                ResetAttachmentPicker();
+                return;
+            }
+
+            var imageBase64 = Convert.ToBase64String(memoryStream.ToArray());
+            _newTransaction.AttachmentDataUrl = $"data:image/jpeg;base64,{imageBase64}";
+            _newTransaction.AttachmentFileName = string.IsNullOrWhiteSpace(file.Name) ? "transaction-photo.jpg" : file.Name;
+            ResetAttachmentPicker();
+        }
+        catch (IOException)
+        {
+            _attachmentError = "That image is still too large after resizing. Try a smaller photo.";
+            RemoveAttachment(resetPicker: true);
+        }
+        catch (Exception)
+        {
+            _attachmentError = "Could not attach that image on this device/browser.";
+            RemoveAttachment(resetPicker: true);
+        }
+    }
+
+    private void RemoveAttachment()
+    {
+        RemoveAttachment(resetPicker: true);
+    }
+
+    private void RemoveAttachment(bool resetPicker)
+    {
+        _newTransaction.AttachmentDataUrl = null;
+        _newTransaction.AttachmentFileName = null;
+
+        if (resetPicker)
+        {
+            ResetAttachmentPicker();
+        }
+    }
+
+    private void ResetAttachmentPicker()
+    {
+        _attachmentInputVersion++;
     }
 
     private async Task AddTransaction()
@@ -377,7 +518,9 @@
             AccountId = accountId
         };
         _newTransactionAmount = string.Empty;
+        _attachmentError = null;
         _showTransactionModal = false;
+        ResetAttachmentPicker();
 
         await PersistLedger();
     }
@@ -404,6 +547,9 @@
             Date = DateTime.Today,
             Direction = _newTransaction.Direction
         };
+
+        _attachmentError = null;
+        ResetAttachmentPicker();
     }
 
     private async Task PersistLedger()

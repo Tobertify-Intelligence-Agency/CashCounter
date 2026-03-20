@@ -75,6 +75,9 @@ public class AccountTransaction
     public string Category { get; set; } = string.Empty;
     public DateTime Date { get; set; } = DateTime.Today;
     public string Notes { get; set; } = string.Empty;
+    public string? AttachmentDataUrl { get; set; }
+    public string? AttachmentFileName { get; set; }
+    public bool HasAttachment => !string.IsNullOrWhiteSpace(AttachmentDataUrl);
 }
 
 public class CategorySummary
