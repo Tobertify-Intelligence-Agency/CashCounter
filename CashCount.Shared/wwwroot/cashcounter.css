@@ -1657,8 +1657,8 @@
 }
 
 .tc-summary-item.expenses {
-    background: #fff7ed;
-    border: 1px solid #fed7aa;
+    background: #fff1f2;
+    border: 1px solid #fbc5d1;
 }
 
 .tc-summary-item.balance.positive {
@@ -1685,7 +1685,7 @@
 }
 
 .tc-summary-item.income .tc-summary-amount { color: #16a34a; }
-.tc-summary-item.expenses .tc-summary-amount { color: #ea580c; }
+.tc-summary-item.expenses .tc-summary-amount { color: #d4576b; }
 .tc-summary-item.balance.positive .tc-summary-amount { color: var(--primary-color); }
 .tc-summary-item.balance.negative .tc-summary-amount { color: var(--danger-color); }
 
@@ -1750,9 +1750,9 @@
 
 .tc-type-btn.active.expense,
 .tc-segmented-btn.active.expense {
-    background: #fff7ed;
-    border-color: #ea580c;
-    color: #ea580c;
+    background: #fff1f2;
+    border-color: #f3a5b3;
+    color: #d4576b;
 }
 
 .tc-type-btn.active.income,
@@ -1855,11 +1855,11 @@
 }
 
 .tc-btn-add.expense {
-    background: #ea580c;
+    background: #d4576b;
 }
 
 .tc-btn-add.expense:hover:not(:disabled) {
-    background: #c2410c;
+    background: #bf4258;
 }
 
 .tc-btn-add.income {
@@ -1942,7 +1942,7 @@
 }
 
 .tc-entry.income .tc-entry-type-bar { background: #16a34a; }
-.tc-entry.expense .tc-entry-type-bar { background: #ea580c; }
+.tc-entry.expense .tc-entry-type-bar { background: #d4576b; }
 
 .tc-entry-body {
     flex: 1;
@@ -1970,7 +1970,7 @@
 }
 
 .tc-entry-amount.income { color: #16a34a; }
-.tc-entry-amount.expense { color: #ea580c; }
+.tc-entry-amount.expense { color: #d4576b; }
 
 .tc-entry-bottom {
     display: flex;
@@ -2567,7 +2567,7 @@
 }
 
 .af-attachment-header p,
-.af-attachment-empty p {
+.af-attachment-helper {
     margin: 0.3rem 0 0;
     color: var(--text-secondary);
     font-size: 0.9rem;
@@ -2583,11 +2583,84 @@
     white-space: nowrap;
 }
 
-.af-attachment-preview-card,
-.af-attachment-empty {
+.af-attachment-inline-control {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-height: 2.9rem;
+    margin-top: 0.15rem;
+    padding: 0.55rem 0.8rem 0.55rem 0.95rem;
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: white;
+}
+
+.af-attachment-inline-control.has-value {
+    border-color: #cbd5e1;
+    background: #ffffff;
+}
+
+.af-attachment-inline-value {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+
+.af-attachment-inline-control.has-value .af-attachment-inline-value {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.af-attachment-inline-actions,
+.af-attachment-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+}
+
+.af-inline-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: #eef2f7;
+    color: #475569;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.af-inline-icon-btn:hover {
+    background: #e2e8f0;
+    color: #334155;
+    transform: translateY(-1px);
+}
+
+.af-inline-icon-btn-danger {
+    background: #fff1f2;
+    color: #be4458;
+}
+
+.af-inline-icon-btn-danger:hover {
+    background: #ffe4e6;
+    color: #9f3044;
+}
+
+.af-attachment-preview-card {
     display: flex;
     flex-direction: column;
     gap: 0.85rem;
+    margin-top: 0.9rem;
 }
 
 .af-attachment-preview-image {
@@ -2599,17 +2672,28 @@
     background: white;
 }
 
-.af-attachment-actions {
-    display: flex;
-    gap: 0.65rem;
-    flex-wrap: wrap;
-}
-
-.af-file-action {
+.af-link-action {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #2563eb;
+    font-weight: 600;
     cursor: pointer;
+}
+
+.af-link-action:hover {
+    color: #1d4ed8;
+}
+
+.af-link-action-danger {
+    color: #be4458;
+}
+
+.af-link-action-danger:hover {
+    color: #9f3044;
 }
 
 .af-attachment-chip {
@@ -2622,6 +2706,16 @@
     color: #1d4ed8;
     font-size: 0.78rem;
     font-weight: 700;
+}
+
+.af-modal-cancel {
+    color: #475569;
+    background: #f1f5f9;
+    border: 1px solid #d8e1eb;
+}
+
+.af-modal-cancel:hover {
+    background: #e2e8f0;
 }
 
 .af-form-error {

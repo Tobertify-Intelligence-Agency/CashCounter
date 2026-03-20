@@ -293,26 +293,32 @@
                                capture="environment" />
                 </div>
 
+                <div class="af-attachment-inline-control @(_newTransaction.HasAttachment ? "has-value" : string.Empty)">
+                    <span class="af-attachment-inline-value">@AttachmentInputLabel</span>
+                    <div class="af-attachment-inline-actions">
+                        <label class="af-inline-icon-btn" for="transaction-photo-picker" title="Choose from files or gallery" aria-label="Choose from files or gallery">🖼️</label>
+                        <label class="af-inline-icon-btn" for="transaction-camera-picker" title="Take a photo" aria-label="Take a photo">📷</label>
+                        @if (_newTransaction.HasAttachment)
+                        {
+                            <button type="button" class="af-inline-icon-btn af-inline-icon-btn-danger" @onclick="RemoveAttachment" title="Remove picture" aria-label="Remove picture">✕</button>
+                        }
+                    </div>
+                </div>
+
                 @if (_newTransaction.HasAttachment)
                 {
                     <div class="af-attachment-preview-card">
                         <img src="@_newTransaction.AttachmentDataUrl" alt="Selected transaction picture" class="af-attachment-preview-image" />
                         <div class="af-attachment-actions">
-                            <label class="btn-save af-file-action" for="transaction-photo-picker">Replace picture</label>
-                            <label class="btn-clear af-file-action" for="transaction-camera-picker">Take new</label>
-                            <button type="button" class="btn-clear" @onclick="RemoveAttachment">Remove</button>
+                            <label class="af-link-action" for="transaction-photo-picker">Replace picture</label>
+                            <label class="af-link-action" for="transaction-camera-picker">Take new</label>
+                            <button type="button" class="af-link-action af-link-action-danger" @onclick="RemoveAttachment">Remove</button>
                         </div>
                     </div>
                 }
                 else
                 {
-                    <div class="af-attachment-empty">
-                        <p>Add a receipt, invoice, or reference photo.</p>
-                        <div class="af-attachment-actions">
-                            <label class="btn-save af-file-action" for="transaction-photo-picker">Choose file / gallery</label>
-                            <label class="btn-clear af-file-action" for="transaction-camera-picker">Use camera</label>
-                        </div>
-                    </div>
+                    <p class="af-attachment-helper">Add a receipt, invoice, or reference photo.</p>
                 }
 
                 @if (!string.IsNullOrWhiteSpace(_attachmentError))
@@ -329,7 +335,7 @@
             </datalist>
 
             <div class="af-modal-actions">
-                <button class="btn-clear" @onclick="CloseTransactionModal">Cancel</button>
+                <button class="btn-clear af-modal-cancel" @onclick="CloseTransactionModal">Cancel</button>
                 <button class="tc-btn-add @(_newTransaction.Direction == CashFlowDirection.Incoming ? "income" : "expense")"
                         @onclick="AddTransaction"
                         disabled="@(!CanAddTransaction)">
@@ -397,6 +403,9 @@
     private string IncomeFillPercent => ActivityMax <= 0 ? "0" : ((double)(_ledger.TotalIncoming / ActivityMax) * 100d).ToString("0.#", CultureInfo.InvariantCulture);
     private string OutgoingFillPercent => ActivityMax <= 0 ? "0" : ((double)(_ledger.TotalOutgoing / ActivityMax) * 100d).ToString("0.#", CultureInfo.InvariantCulture);
     private string CategoryChartStyle => BuildCategoryChartStyle();
+    private string AttachmentInputLabel => _newTransaction.HasAttachment
+        ? _newTransaction.AttachmentFileName ?? "Attached picture"
+        : "Add receipt or photo";
 
     private bool CanAddTransaction =>
         !string.IsNullOrWhiteSpace(_newTransaction.AccountId) &&
@@ -441,7 +450,6 @@
         if (!file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
         {
             _attachmentError = "Please select an image file.";
-            ResetAttachmentPicker();
             return;
         }
 
@@ -455,24 +463,27 @@
             if (memoryStream.Length == 0)
             {
                 _attachmentError = "The selected image could not be read.";
-                ResetAttachmentPicker();
                 return;
             }
 
             var imageBase64 = Convert.ToBase64String(memoryStream.ToArray());
             _newTransaction.AttachmentDataUrl = $"data:image/jpeg;base64,{imageBase64}";
             _newTransaction.AttachmentFileName = string.IsNullOrWhiteSpace(file.Name) ? "transaction-photo.jpg" : file.Name;
-            ResetAttachmentPicker();
         }
         catch (IOException)
         {
             _attachmentError = "That image is still too large after resizing. Try a smaller photo.";
-            RemoveAttachment(resetPicker: true);
+            RemoveAttachment(resetPicker: false);
+        }
+        catch (ObjectDisposedException)
+        {
+            _attachmentError = "The image picker closed before the photo finished loading. Please try again.";
+            RemoveAttachment(resetPicker: false);
         }
         catch (Exception)
         {
             _attachmentError = "Could not attach that image on this device/browser.";
-            RemoveAttachment(resetPicker: true);
+            RemoveAttachment(resetPicker: false);
         }
     }
 
