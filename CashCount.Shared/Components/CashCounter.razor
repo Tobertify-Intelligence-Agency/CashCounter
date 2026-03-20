@@ -1,10 +1,16 @@
 @using CashCount.Shared.Models
 @using CashCount.Shared.Services
+@using CashCount.Shared.Utilities
 @inject IStorageService StorageService
 @inject IPremiumService PremiumService
 @inject NavigationManager NavigationManager
 
 <div class="cash-counter">
+    @if (!string.IsNullOrWhiteSpace(_statusMessage))
+    {
+        <div class="save-success">@_statusMessage</div>
+    }
+
     @if (_canSelectCurrency)
     {
         <div class="currency-selector">
@@ -88,6 +94,7 @@
                     <input type="text"
                            @bind="_saveName"
                            @bind:event="oninput"
+                           maxlength="80"
                            placeholder="Enter name to save (e.g., Monday Count)"
                            class="save-name-input" />
                     <button class="btn-save"
@@ -118,14 +125,15 @@
 </div>
 
 @code {
-    private List<Currency> _currencies = Currency.GetAllCurrencies();
+    private readonly List<Currency> _currencies = Currency.GetAllCurrencies();
     private Currency? _selectedCurrency;
     private string _saveName = string.Empty;
-    private bool _showSaveSuccess = false;
+    private bool _showSaveSuccess;
+    private string? _statusMessage;
 
-    private bool _canSelectCurrency = false;
-    private bool _canSaveCounts = false;
-    private bool _canLoadCounts = false;
+    private bool _canSelectCurrency;
+    private bool _canSaveCounts;
+    private bool _canLoadCounts;
 
     protected override async Task OnInitializedAsync()
     {
@@ -136,34 +144,33 @@
         _canLoadCounts = await PremiumService.IsFeatureEnabledAsync(PremiumFeature.LoadCounts);
 
         if (_canLoadCounts)
-        {
-            var uri = new Uri(NavigationManager.Uri);
-            var loadId = GetQueryParameter(uri.Query, "load");
-            if (!string.IsNullOrEmpty(loadId))
-            {
-                var savedCount = await StorageService.GetByIdAsync(loadId);
-                if (savedCount != null)
-                    LoadSavedCount(savedCount);
-            }
-        }
+            await TryLoadFromQueryAsync();
     }
 
-    private static string? GetQueryParameter(string query, string key)
+    private async Task TryLoadFromQueryAsync()
     {
-        if (string.IsNullOrEmpty(query))
-            return null;
+        var uri = new Uri(NavigationManager.Uri);
+        var loadId = QueryStringHelper.GetValue(uri.Query, "load");
+        if (string.IsNullOrWhiteSpace(loadId))
+            return;
 
-        var queryString = query.TrimStart('?');
-        var pairs = queryString.Split('&');
-        foreach (var pair in pairs)
+        var savedCount = await StorageService.GetByIdAsync(loadId);
+        if (savedCount is null)
         {
-            var parts = pair.Split('=', 2);
-            if (parts.Length == 2 && parts[0].Equals(key, StringComparison.OrdinalIgnoreCase))
-            {
-                return Uri.UnescapeDataString(parts[1]);
-            }
+            _statusMessage = "Saved count could not be found.";
+            ClearLoadQuery(uri);
+            return;
         }
-        return null;
+
+        LoadSavedCount(savedCount);
+        _statusMessage = $"Loaded {savedCount.Name}.";
+        ClearLoadQuery(uri);
+    }
+
+    private void ClearLoadQuery(Uri uri)
+    {
+        var cleanPath = uri.GetLeftPart(UriPartial.Path);
+        NavigationManager.NavigateTo(cleanPath, replace: true);
     }
 
     private void OnCurrencyChanged(ChangeEventArgs e)
@@ -192,12 +199,15 @@
     private void Increment(Denomination denom)
     {
         denom.Quantity++;
+        _statusMessage = null;
     }
 
     private void Decrement(Denomination denom)
     {
         if (denom.Quantity > 0)
             denom.Quantity--;
+
+        _statusMessage = null;
     }
 
     private void ClearAll()
@@ -211,6 +221,7 @@
             coin.Quantity = 0;
 
         _saveName = string.Empty;
+        _statusMessage = null;
     }
 
     private async Task SaveCurrentCount()
@@ -220,46 +231,20 @@
 
         var savedCount = new SavedCount
         {
-            Name = string.IsNullOrWhiteSpace(_saveName)
-                ? $"Count {DateTime.Now:dd.MM.yyyy HH:mm}"
-                : _saveName.Trim(),
+            Name = GetSaveName(),
             SavedAt = DateTime.Now,
             CurrencyCode = _selectedCurrency.Code,
             CurrencySymbol = _selectedCurrency.Symbol,
             TotalAmount = CalculateTotal(),
             BanknotesTotal = CalculateBanknotesTotal(),
             CoinsTotal = CalculateCoinsTotal(),
-            Denominations = new List<DenominationCount>()
+            Denominations = BuildDenominationsSnapshot()
         };
-
-        // Save banknotes with quantities > 0
-        foreach (var note in _selectedCurrency.Banknotes.Where(n => n.Quantity > 0))
-        {
-            savedCount.Denominations.Add(new DenominationCount
-            {
-                Value = note.Value,
-                DisplayName = note.DisplayName,
-                Quantity = note.Quantity,
-                IsCoin = false
-            });
-        }
-
-        // Save coins with quantities > 0
-        foreach (var coin in _selectedCurrency.Coins.Where(c => c.Quantity > 0))
-        {
-            savedCount.Denominations.Add(new DenominationCount
-            {
-                Value = coin.Value,
-                DisplayName = coin.DisplayName,
-                Quantity = coin.Quantity,
-                IsCoin = true
-            });
-        }
 
         await StorageService.SaveCountAsync(savedCount);
 
-        // Show success message briefly
         _showSaveSuccess = true;
+        _statusMessage = null;
         StateHasChanged();
 
         await Task.Delay(2000);
@@ -268,17 +253,53 @@
         StateHasChanged();
     }
 
-    // Method to load a saved count (called from SavedCounts component)
+    private string GetSaveName()
+    {
+        var normalizedName = PersistedDataNormalizer.NormalizeName(_saveName, 80);
+        return string.IsNullOrWhiteSpace(normalizedName)
+            ? $"Count {DateTime.Now:dd.MM.yyyy HH:mm}"
+            : normalizedName;
+    }
+
+    private List<DenominationCount> BuildDenominationsSnapshot()
+    {
+        if (_selectedCurrency is null)
+            return new List<DenominationCount>();
+
+        var denominations = new List<DenominationCount>();
+
+        foreach (var note in _selectedCurrency.Banknotes.Where(n => n.Quantity > 0))
+        {
+            denominations.Add(new DenominationCount
+            {
+                Value = note.Value,
+                DisplayName = note.DisplayName,
+                Quantity = note.Quantity,
+                IsCoin = false
+            });
+        }
+
+        foreach (var coin in _selectedCurrency.Coins.Where(c => c.Quantity > 0))
+        {
+            denominations.Add(new DenominationCount
+            {
+                Value = coin.Value,
+                DisplayName = coin.DisplayName,
+                Quantity = coin.Quantity,
+                IsCoin = true
+            });
+        }
+
+        return denominations;
+    }
+
     public void LoadSavedCount(SavedCount saved)
     {
-        // Find and select the currency
         _selectedCurrency = _currencies.FirstOrDefault(c => c.Code == saved.CurrencyCode);
         if (_selectedCurrency == null) return;
 
-        // Clear all first
         ClearAll();
 
-        // Load the saved denominations
         foreach (var savedDenom in saved.Denominations)
         {
             if (savedDenom.IsCoin)
@@ -293,6 +314,7 @@
             }
         }
 
+        _saveName = saved.Name;
         StateHasChanged();
     }
 }

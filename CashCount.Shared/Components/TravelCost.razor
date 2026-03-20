@@ -1,10 +1,17 @@
+@using System.Globalization
 @using CashCount.Shared.Models
 @using CashCount.Shared.Services
+@using CashCount.Shared.Utilities
 @inject IStorageService StorageService
 @inject IPremiumService PremiumService
 @inject NavigationManager NavigationManager
 
 <div class="travel-cost">
+
+    @if (!string.IsNullOrWhiteSpace(_statusMessage))
+    {
+        <div class="save-success">@_statusMessage</div>
+    }
 
     @* Collection Header *@
     <div class="tc-header-card">
@@ -14,6 +21,7 @@
                 <input class="tc-name-input"
                        @bind="_collection.Name"
                        @bind:event="oninput"
+                       maxlength="80"
                        @onblur="StopEditingName"
                        @onkeydown="OnNameKeyDown"
                        placeholder="Trip name..."
@@ -72,6 +80,7 @@
                 <input class="tc-input tc-desc-input"
                        @bind="_newEntry.Description"
                        @bind:event="oninput"
+                       maxlength="120"
                        placeholder="Description (e.g. Fuel, Hotel, Donation...)" />
             </div>
 
@@ -82,6 +91,7 @@
                            type="number"
                            min="0"
                            step="0.01"
+                           inputmode="decimal"
                            @bind="_newEntryAmountStr"
                            @bind:event="oninput"
                            placeholder="0.00" />
@@ -90,6 +100,7 @@
                 <input class="tc-input tc-category-input"
                        @bind="_newEntry.Category"
                        @bind:event="oninput"
+                       maxlength="60"
                        placeholder="Category (optional)" />
 
                 <input class="tc-input tc-date-input"
@@ -163,6 +174,7 @@
                 <input type="text"
                        @bind="_saveName"
                        @bind:event="oninput"
+                       maxlength="80"
                        placeholder="Trip name to save (e.g. Italy 2026)"
                        class="save-name-input" />
                 <button class="btn-save"
@@ -198,11 +210,12 @@
     private TravelCollection _collection = new();
     private TravelCostEntry _newEntry = new();
     private string _newEntryAmountStr = string.Empty;
-    private bool _editingName = false;
-    private EntryType? _filter = null;
-    private bool _canSave = false;
+    private bool _editingName;
+    private EntryType? _filter;
+    private bool _canSave;
     private string _saveName = string.Empty;
-    private bool _showSaveSuccess = false;
+    private bool _showSaveSuccess;
+    private string? _statusMessage;
 
     private static readonly List<(string Symbol, string Label)> _currencies = new()
     {
@@ -220,43 +233,49 @@
 
         var canLoad = await PremiumService.IsFeatureEnabledAsync(PremiumFeature.LoadTrips);
         if (canLoad)
-        {
-            var uri = new Uri(NavigationManager.Uri);
-            var loadId = GetQueryParameter(uri.Query, "load");
-            if (!string.IsNullOrEmpty(loadId))
-            {
-                var savedTrip = await StorageService.GetTripByIdAsync(loadId);
-                if (savedTrip != null)
-                    _collection = savedTrip;
-            }
-        }
+            await TryLoadFromQueryAsync();
     }
 
-    private static string? GetQueryParameter(string query, string key)
+    private async Task TryLoadFromQueryAsync()
     {
-        if (string.IsNullOrEmpty(query)) return null;
-        var pairs = query.TrimStart('?').Split('&');
-        foreach (var pair in pairs)
+        var uri = new Uri(NavigationManager.Uri);
+        var loadId = QueryStringHelper.GetValue(uri.Query, "load");
+        if (string.IsNullOrWhiteSpace(loadId))
+            return;
+
+        var savedTrip = await StorageService.GetTripByIdAsync(loadId);
+        if (savedTrip is null)
         {
-            var parts = pair.Split('=', 2);
-            if (parts.Length == 2 && parts[0].Equals(key, StringComparison.OrdinalIgnoreCase))
-                return Uri.UnescapeDataString(parts[1]);
+            _statusMessage = "Saved trip could not be found.";
+            ClearLoadQuery(uri);
+            return;
         }
-        return null;
+
+        _collection = PersistedDataNormalizer.NormalizeTrip(savedTrip);
+        _saveName = _collection.Name;
+        _statusMessage = $"Loaded {GetDisplayTripName(_collection)}.";
+        ClearLoadQuery(uri);
+    }
+
+    private void ClearLoadQuery(Uri uri)
+    {
+        var cleanPath = uri.GetLeftPart(UriPartial.Path);
+        NavigationManager.NavigateTo(cleanPath, replace: true);
     }
 
     private async Task SaveCurrentTrip()
     {
-        if (_collection.Entries.Count == 0) return;
+        if (_collection.Entries.Count == 0)
+            return;
 
-        if (!string.IsNullOrWhiteSpace(_saveName))
-            _collection.Name = _saveName.Trim();
-        else if (string.IsNullOrWhiteSpace(_collection.Name))
-            _collection.Name = $"Trip {DateTime.Now:dd.MM.yyyy HH:mm}";
+        _collection.Name = GetTripNameForSave();
+        _collection.CurrencySymbol = PersistedDataNormalizer.NormalizeName(_collection.CurrencySymbol, 8);
+        _collection = PersistedDataNormalizer.NormalizeTrip(_collection);
 
         await StorageService.SaveTripAsync(_collection);
 
         _showSaveSuccess = true;
+        _statusMessage = null;
         StateHasChanged();
         await Task.Delay(2000);
         _showSaveSuccess = false;
@@ -266,8 +285,7 @@
 
     private bool CanAdd =>
         !string.IsNullOrWhiteSpace(_newEntry.Description) &&
-        decimal.TryParse(_newEntryAmountStr, System.Globalization.NumberStyles.Any,
-            System.Globalization.CultureInfo.InvariantCulture, out var v) && v > 0;
+        TryParseAmount(_newEntryAmountStr, out var amount) && amount > 0;
 
     private IEnumerable<TravelCostEntry> FilteredEntries =>
         _filter == null
@@ -276,21 +294,24 @@
 
     private void AddEntry()
     {
-        if (!decimal.TryParse(_newEntryAmountStr, System.Globalization.NumberStyles.Any,
-                System.Globalization.CultureInfo.InvariantCulture, out var amount) || amount <= 0)
+        if (!TryParseAmount(_newEntryAmountStr, out var amount) || amount <= 0)
             return;
 
-        var description = _newEntry.Description.Trim();
-        var category = _newEntry.Category.Trim();
-        if (string.IsNullOrWhiteSpace(description))
+        var entry = PersistedDataNormalizer.NormalizeEntry(new TravelCostEntry
+        {
+            Description = _newEntry.Description,
+            Category = _newEntry.Category,
+            Amount = amount,
+            Type = _newEntry.Type,
+            Date = _newEntry.Date
+        });
+
+        if (string.IsNullOrWhiteSpace(entry.Description))
             return;
 
-        _newEntry.Description = description;
-        _newEntry.Category = category;
-        _newEntry.Amount = amount;
-        _collection.Entries.Add(_newEntry);
+        _collection.Entries.Add(entry);
+        _statusMessage = null;
 
-        // Reset form, keep type and date for convenience
         var nextType = _newEntry.Type;
         var nextDate = _newEntry.Date;
         _newEntry = new TravelCostEntry { Type = nextType, Date = nextDate };
@@ -306,11 +327,14 @@
     {
         _collection.Entries.Clear();
         _filter = null;
+        _statusMessage = null;
     }
 
     private void OnCurrencyChanged(ChangeEventArgs e)
     {
-        _collection.CurrencySymbol = e.Value?.ToString() ?? "€";
+        _collection.CurrencySymbol = PersistedDataNormalizer.NormalizeName(e.Value?.ToString(), 8);
+        if (string.IsNullOrWhiteSpace(_collection.CurrencySymbol))
+            _collection.CurrencySymbol = "€";
     }
 
     private void StartEditingName()
@@ -320,6 +344,7 @@
 
     private void StopEditingName()
     {
+        _collection.Name = PersistedDataNormalizer.NormalizeName(_collection.Name, 80);
         _editingName = false;
     }
 
@@ -327,5 +352,28 @@
     {
         if (e.Key == "Enter" || e.Key == "Escape")
             StopEditingName();
+    }
+
+    private static bool TryParseAmount(string? value, out decimal amount)
+    {
+        var normalized = value?.Trim().Replace(',', '.');
+        return decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out amount);
+    }
+
+    private string GetTripNameForSave()
+    {
+        var preferredName = PersistedDataNormalizer.NormalizeName(_saveName, 80);
+        if (!string.IsNullOrWhiteSpace(preferredName))
+            return preferredName;
+
+        var currentName = PersistedDataNormalizer.NormalizeName(_collection.Name, 80);
+        return string.IsNullOrWhiteSpace(currentName)
+            ? $"Trip {DateTime.Now:dd.MM.yyyy HH:mm}"
+            : currentName;
+    }
+
+    private static string GetDisplayTripName(TravelCollection trip)
+    {
+        return string.IsNullOrWhiteSpace(trip.Name) ? "Unnamed Trip" : trip.Name;
     }
 }
