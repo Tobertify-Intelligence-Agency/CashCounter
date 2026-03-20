@@ -39,5 +39,15 @@ public enum PremiumFeature
     /// <summary>
     /// Ability to load previously saved counts.
     /// </summary>
-    LoadCounts
+    LoadCounts,
+
+    /// <summary>
+    /// Ability to save trip collections for later.
+    /// </summary>
+    SaveTrips,
+
+    /// <summary>
+    /// Ability to load previously saved trip collections.
+    /// </summary>
+    LoadTrips
 }

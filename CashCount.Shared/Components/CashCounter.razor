@@ -222,7 +222,7 @@
         {
             Name = string.IsNullOrWhiteSpace(_saveName)
                 ? $"Count {DateTime.Now:dd.MM.yyyy HH:mm}"
-                : _saveName,
+                : _saveName.Trim(),
             SavedAt = DateTime.Now,
             CurrencyCode = _selectedCurrency.Code,
             CurrencySymbol = _selectedCurrency.Symbol,

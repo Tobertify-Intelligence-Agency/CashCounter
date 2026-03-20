@@ -98,7 +98,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _isPremium = await PremiumService.IsFeatureEnabledAsync(PremiumFeature.LoadCounts);
+        _isPremium = await PremiumService.IsFeatureEnabledAsync(PremiumFeature.LoadTrips);
         if (_isPremium)
             await LoadSavedTrips();
         else

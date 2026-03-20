@@ -87,6 +87,8 @@ public class PremiumService : IPremiumService, IDisposable
             PremiumFeature.CurrencySelection => isPremium,
             PremiumFeature.SaveCounts => isPremium,
             PremiumFeature.LoadCounts => isPremium,
+            PremiumFeature.SaveTrips => isPremium,
+            PremiumFeature.LoadTrips => isPremium,
             _ => true // Unknown features are enabled by default
         };
     }

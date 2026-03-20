@@ -1,4 +1,6 @@
 @using Microsoft.AspNetCore.Components.Routing
+@implements IDisposable
+@inject NavigationManager NavigationManager
 
 <div class="app-shell @(IsMenuOpen ? "menu-open" : "")">
     <aside class="side-menu">
@@ -55,6 +57,12 @@
         new ToolItem { Id = "account", Name = "Account", Icon = "\U0001F464", Href = "/account" }
     };
 
+    protected override void OnInitialized()
+    {
+        SyncCurrentToolWithLocation();
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
     private void ToggleMenu()
     {
         IsMenuOpen = !IsMenuOpen;
@@ -66,9 +74,32 @@
         IsMenuOpen = false;
     }
 
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        SyncCurrentToolWithLocation();
+        IsMenuOpen = false;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void SyncCurrentToolWithLocation()
+    {
+        var relativePath = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        var path = string.IsNullOrWhiteSpace(relativePath)
+            ? "/"
+            : $"/{relativePath.Split('?', '#')[0].Trim('/')}";
+
+        CurrentTool = Tools.FirstOrDefault(tool => string.Equals(tool.Href, path, StringComparison.OrdinalIgnoreCase))?.Id
+            ?? "cash-counter";
+    }
+
     private string GetCurrentToolName()
     {
         return Tools.FirstOrDefault(t => t.Id == CurrentTool)?.Name ?? "Tools";
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
     }
 
     private class ToolItem

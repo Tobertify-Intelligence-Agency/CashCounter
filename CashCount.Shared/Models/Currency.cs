@@ -162,9 +162,15 @@ public class Currency
 
 public class Denomination
 {
+    private int _quantity;
+
     public decimal Value { get; set; }
     public string DisplayName { get; set; } = string.Empty;
-    public int Quantity { get; set; }
+    public int Quantity
+    {
+        get => _quantity;
+        set => _quantity = Math.Max(0, value);
+    }
     public decimal Total => Value * Quantity;
 
     public Denomination() { }

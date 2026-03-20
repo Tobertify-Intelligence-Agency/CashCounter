@@ -216,9 +216,9 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _canSave = await PremiumService.IsFeatureEnabledAsync(PremiumFeature.SaveCounts);
+        _canSave = await PremiumService.IsFeatureEnabledAsync(PremiumFeature.SaveTrips);
 
-        var canLoad = await PremiumService.IsFeatureEnabledAsync(PremiumFeature.LoadCounts);
+        var canLoad = await PremiumService.IsFeatureEnabledAsync(PremiumFeature.LoadTrips);
         if (canLoad)
         {
             var uri = new Uri(NavigationManager.Uri);
@@ -250,7 +250,7 @@
         if (_collection.Entries.Count == 0) return;
 
         if (!string.IsNullOrWhiteSpace(_saveName))
-            _collection.Name = _saveName;
+            _collection.Name = _saveName.Trim();
         else if (string.IsNullOrWhiteSpace(_collection.Name))
             _collection.Name = $"Trip {DateTime.Now:dd.MM.yyyy HH:mm}";
 
@@ -280,6 +280,13 @@
                 System.Globalization.CultureInfo.InvariantCulture, out var amount) || amount <= 0)
             return;
 
+        var description = _newEntry.Description.Trim();
+        var category = _newEntry.Category.Trim();
+        if (string.IsNullOrWhiteSpace(description))
+            return;
+
+        _newEntry.Description = description;
+        _newEntry.Category = category;
         _newEntry.Amount = amount;
         _collection.Entries.Add(_newEntry);
 
