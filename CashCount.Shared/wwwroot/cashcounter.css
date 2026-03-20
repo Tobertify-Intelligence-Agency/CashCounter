@@ -2172,6 +2172,95 @@
     font-size: 0.92rem;
 }
 
+.af-panel-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+}
+
+.af-header-cta,
+.af-inline-action,
+.af-empty-action {
+    white-space: nowrap;
+}
+
+.af-panel-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.af-panel-summary > div {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: #f8fafc;
+    padding: 0.85rem 0.95rem;
+}
+
+.af-summary-label {
+    display: block;
+    margin-bottom: 0.3rem;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+}
+
+.af-panel-summary strong {
+    color: var(--text-primary);
+    font-size: 1.05rem;
+}
+
+.af-panel-summary-dense {
+    margin-bottom: 0;
+}
+
+.af-quick-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.af-quick-action {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 1rem;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    text-align: left;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.af-quick-action:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow);
+}
+
+.af-quick-action.incoming {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+}
+
+.af-quick-action.outgoing {
+    background: #fff7ed;
+    border-color: #fed7aa;
+}
+
+.af-quick-action-label {
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-secondary);
+    font-weight: 700;
+}
+
 .af-form-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2290,9 +2379,82 @@
     font-size: 0.82rem;
 }
 
+.af-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    z-index: 1000;
+}
+
+.af-modal-card {
+    width: min(560px, 100%);
+    max-height: calc(100vh - 2rem);
+    overflow: auto;
+    background: var(--card-bg);
+    border-radius: calc(var(--radius) + 4px);
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.22);
+    padding: 1.25rem;
+}
+
+.af-modal-card-wide {
+    width: min(720px, 100%);
+}
+
+.af-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.af-modal-eyebrow {
+    margin: 0 0 0.35rem 0;
+    color: var(--primary-color);
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.af-modal-header h3 {
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.af-modal-header p {
+    margin: 0.35rem 0 0 0;
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+}
+
+.af-modal-close {
+    border: 0;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0.35rem;
+}
+
+.af-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+}
+
 @media (max-width: 900px) {
     .af-dashboard-grid,
-    .af-content-grid {
+    .af-content-grid,
+    .af-panel-summary {
         grid-template-columns: 1fr 1fr;
     }
 }
@@ -2305,19 +2467,25 @@
     .af-dashboard-grid,
     .af-content-grid,
     .af-form-grid,
-    .af-form-grid.compact {
+    .af-form-grid.compact,
+    .af-panel-summary,
+    .af-quick-actions {
         grid-template-columns: 1fr;
     }
 
     .af-header-card,
-    .af-panel {
+    .af-panel,
+    .af-modal-card {
         padding: 1rem;
     }
 
     .af-header-actions,
     .af-account-main,
     .af-panel-header,
+    .af-panel-actions,
     .af-category-item,
+    .af-modal-header,
+    .af-modal-actions,
     .tc-entry-top,
     .tc-entry-bottom {
         flex-direction: column;

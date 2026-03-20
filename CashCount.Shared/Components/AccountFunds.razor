@@ -18,6 +18,8 @@
                     <option value="@currency.Symbol" selected="@(_ledger.CurrencySymbol == currency.Symbol)">@currency.Label</option>
                 }
             </select>
+            <button class="btn-save af-header-cta" @onclick="OpenAccountModal">+ Account / fund</button>
+            <button class="tc-btn-add expense af-header-cta" @onclick="() => OpenTransactionModal(CashFlowDirection.Outgoing)" disabled="@(!_ledger.Accounts.Any())">+ Transaction</button>
             <button class="btn-clear" @onclick="ResetLedger" disabled="@(!_ledger.Accounts.Any() && !_ledger.Transactions.Any())">Reset tracker</button>
         </div>
     </div>
@@ -52,22 +54,26 @@
                     <h3>Accounts & funds</h3>
                     <p>Add each cash account, bank pot, savings bucket, or fund once.</p>
                 </div>
-                <span class="count-badge">@_ledger.Accounts.Count total</span>
+                <div class="af-panel-actions">
+                    <span class="count-badge">@_ledger.Accounts.Count total</span>
+                    <button class="btn-save af-inline-action" @onclick="OpenAccountModal">+ Add</button>
+                </div>
             </div>
 
-            <div class="af-form-grid compact">
-                <input class="tc-input" @bind="_newAccount.Name" @bind:event="oninput" placeholder="Account name" />
-                <select class="af-select" @bind="_newAccount.Kind">
-                    @foreach (var kind in Enum.GetValues<AccountKind>())
-                    {
-                        <option value="@kind">@kind</option>
-                    }
-                </select>
-                <input class="tc-input" type="number" min="0" step="0.01" @bind="_newAccountOpeningBalance" @bind:event="oninput" placeholder="Opening balance" />
-                <input class="tc-input" @bind="_newAccount.Notes" @bind:event="oninput" placeholder="Optional note" />
+            <div class="af-panel-summary">
+                <div>
+                    <span class="af-summary-label">Tracked accounts</span>
+                    <strong>@_ledger.Accounts.Count</strong>
+                </div>
+                <div>
+                    <span class="af-summary-label">Opening balance</span>
+                    <strong>@FormatAmount(_ledger.TotalOpeningBalance)</strong>
+                </div>
+                <div>
+                    <span class="af-summary-label">Live balance</span>
+                    <strong>@FormatAmount(_ledger.TotalBalance)</strong>
+                </div>
             </div>
-
-            <button class="btn-save af-add-btn" @onclick="AddAccount" disabled="@(!CanAddAccount)">+ Add account</button>
 
             @if (_ledger.Accounts.Any())
             {
@@ -105,6 +111,7 @@
                 <div class="tc-empty-state af-inline-empty">
                     <span class="tc-empty-icon">🏦</span>
                     <p>No accounts yet. Start with the cash box, main bank account, or a fund bucket.</p>
+                    <button class="btn-save af-empty-action" @onclick="OpenAccountModal">Create first account</button>
                 </div>
             }
         </section>
@@ -112,47 +119,42 @@
         <section class="af-panel">
             <div class="af-panel-header">
                 <div>
-                    <h3>Log a transaction</h3>
-                    <p>Attach every incoming or outgoing movement to one account.</p>
+                    <h3>Transactions</h3>
+                    <p>Keep the ledger tidy by logging money in or out only when needed.</p>
                 </div>
-                <span class="count-badge">Auto-saved</span>
+                <div class="af-panel-actions">
+                    <span class="count-badge">Auto-saved</span>
+                    <button class="tc-btn-add expense af-inline-action" @onclick="() => OpenTransactionModal(CashFlowDirection.Outgoing)" disabled="@(!_ledger.Accounts.Any())">+ Add</button>
+                </div>
             </div>
 
             @if (_ledger.Accounts.Any())
             {
-                <div class="tc-type-toggle">
-                    <button class="tc-type-btn @(_newTransaction.Direction == CashFlowDirection.Outgoing ? "active expense" : "")"
-                            @onclick='() => _newTransaction.Direction = CashFlowDirection.Outgoing'>Outgoing</button>
-                    <button class="tc-type-btn @(_newTransaction.Direction == CashFlowDirection.Incoming ? "active income" : "")"
-                            @onclick='() => _newTransaction.Direction = CashFlowDirection.Incoming'>Incoming</button>
+                <div class="af-quick-actions">
+                    <button class="af-quick-action incoming" @onclick="() => OpenTransactionModal(CashFlowDirection.Incoming)">
+                        <span class="af-quick-action-label">Incoming</span>
+                        <strong>Log money in</strong>
+                    </button>
+                    <button class="af-quick-action outgoing" @onclick="() => OpenTransactionModal(CashFlowDirection.Outgoing)">
+                        <span class="af-quick-action-label">Outgoing</span>
+                        <strong>Log money out</strong>
+                    </button>
                 </div>
 
-                <div class="af-form-grid">
-                    <select class="af-select" @bind="_newTransaction.AccountId">
-                        @foreach (var account in _ledger.Accounts.OrderBy(a => a.Name))
-                        {
-                            <option value="@account.Id">@account.Name</option>
-                        }
-                    </select>
-                    <input class="tc-input" @bind="_newTransaction.Description" @bind:event="oninput" placeholder="Description" />
-                    <input class="tc-input" type="number" min="0" step="0.01" @bind="_newTransactionAmount" @bind:event="oninput" placeholder="Amount" />
-                    <input class="tc-input" list="transaction-categories" @bind="_newTransaction.Category" @bind:event="oninput" placeholder="Category" />
-                    <input class="tc-input" type="date" @bind="_newTransaction.Date" @bind:event="oninput" />
-                    <input class="tc-input" @bind="_newTransaction.Notes" @bind:event="oninput" placeholder="Optional note" />
+                <div class="af-panel-summary af-panel-summary-dense">
+                    <div>
+                        <span class="af-summary-label">Transactions</span>
+                        <strong>@_ledger.Transactions.Count</strong>
+                    </div>
+                    <div>
+                        <span class="af-summary-label">Latest entry</span>
+                        <strong>@(RecentTransactions.FirstOrDefault()?.Date.ToString("dd.MM.yyyy") ?? "—")</strong>
+                    </div>
+                    <div>
+                        <span class="af-summary-label">Suggested next step</span>
+                        <strong>@(_ledger.Transactions.Any() ? "Keep logging from the popup" : "Add your first transaction")</strong>
+                    </div>
                 </div>
-
-                <datalist id="transaction-categories">
-                    @foreach (var category in SuggestedCategories)
-                    {
-                        <option value="@category"></option>
-                    }
-                </datalist>
-
-                <button class="tc-btn-add @(_newTransaction.Direction == CashFlowDirection.Incoming ? "income" : "expense")"
-                        @onclick="AddTransaction"
-                        disabled="@(!CanAddTransaction)">
-                    + Add @(_newTransaction.Direction == CashFlowDirection.Incoming ? "incoming" : "outgoing")
-                </button>
             }
             else
             {
@@ -253,12 +255,100 @@
     </div>
 </div>
 
+@if (_showAccountModal)
+{
+    <div class="af-modal-backdrop" @onclick="CloseAccountModal">
+        <div class="af-modal-card" @onclick:stopPropagation="true">
+            <div class="af-modal-header">
+                <div>
+                    <p class="af-modal-eyebrow">New account</p>
+                    <h3>Add account or fund</h3>
+                    <p>Create a pot once, then track all flow against it.</p>
+                </div>
+                <button class="af-modal-close" @onclick="CloseAccountModal" aria-label="Close">✕</button>
+            </div>
+
+            <div class="af-form-grid compact">
+                <input class="tc-input" @bind="_newAccount.Name" @bind:event="oninput" placeholder="Account name" />
+                <select class="af-select" @bind="_newAccount.Kind">
+                    @foreach (var kind in Enum.GetValues<AccountKind>())
+                    {
+                        <option value="@kind">@kind</option>
+                    }
+                </select>
+                <input class="tc-input" type="number" min="0" step="0.01" @bind="_newAccountOpeningBalance" @bind:event="oninput" placeholder="Opening balance" />
+                <input class="tc-input" @bind="_newAccount.Notes" @bind:event="oninput" placeholder="Optional note" />
+            </div>
+
+            <div class="af-modal-actions">
+                <button class="btn-clear" @onclick="CloseAccountModal">Cancel</button>
+                <button class="btn-save" @onclick="AddAccount" disabled="@(!CanAddAccount)">Create account</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_showTransactionModal)
+{
+    <div class="af-modal-backdrop" @onclick="CloseTransactionModal">
+        <div class="af-modal-card af-modal-card-wide" @onclick:stopPropagation="true">
+            <div class="af-modal-header">
+                <div>
+                    <p class="af-modal-eyebrow">New transaction</p>
+                    <h3>Log money movement</h3>
+                    <p>Attach every incoming or outgoing movement to one tracked account.</p>
+                </div>
+                <button class="af-modal-close" @onclick="CloseTransactionModal" aria-label="Close">✕</button>
+            </div>
+
+            <div class="tc-type-toggle">
+                <button class="tc-type-btn @(_newTransaction.Direction == CashFlowDirection.Outgoing ? "active expense" : "")"
+                        @onclick='() => _newTransaction.Direction = CashFlowDirection.Outgoing'>Outgoing</button>
+                <button class="tc-type-btn @(_newTransaction.Direction == CashFlowDirection.Incoming ? "active income" : "")"
+                        @onclick='() => _newTransaction.Direction = CashFlowDirection.Incoming'>Incoming</button>
+            </div>
+
+            <div class="af-form-grid">
+                <select class="af-select" @bind="_newTransaction.AccountId">
+                    @foreach (var account in _ledger.Accounts.OrderBy(a => a.Name))
+                    {
+                        <option value="@account.Id">@account.Name</option>
+                    }
+                </select>
+                <input class="tc-input" @bind="_newTransaction.Description" @bind:event="oninput" placeholder="Description" />
+                <input class="tc-input" type="number" min="0" step="0.01" @bind="_newTransactionAmount" @bind:event="oninput" placeholder="Amount" />
+                <input class="tc-input" list="transaction-categories" @bind="_newTransaction.Category" @bind:event="oninput" placeholder="Category" />
+                <input class="tc-input" type="date" @bind="_newTransaction.Date" @bind:event="oninput" />
+                <input class="tc-input" @bind="_newTransaction.Notes" @bind:event="oninput" placeholder="Optional note" />
+            </div>
+
+            <datalist id="transaction-categories">
+                @foreach (var category in SuggestedCategories)
+                {
+                    <option value="@category"></option>
+                }
+            </datalist>
+
+            <div class="af-modal-actions">
+                <button class="btn-clear" @onclick="CloseTransactionModal">Cancel</button>
+                <button class="tc-btn-add @(_newTransaction.Direction == CashFlowDirection.Incoming ? "income" : "expense")"
+                        @onclick="AddTransaction"
+                        disabled="@(!CanAddTransaction)">
+                    + Add @(_newTransaction.Direction == CashFlowDirection.Incoming ? "incoming" : "outgoing")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private AccountLedger _ledger = new();
     private TrackedAccount _newAccount = new();
     private string _newAccountOpeningBalance = string.Empty;
     private AccountTransaction _newTransaction = new();
     private string _newTransactionAmount = string.Empty;
+    private bool _showAccountModal;
+    private bool _showTransactionModal;
 
     private static readonly List<(string Symbol, string Label)> _currencies = new()
     {
@@ -310,6 +400,35 @@
         decimal.TryParse(_newTransactionAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var amount) &&
         amount > 0;
 
+    private void OpenAccountModal()
+    {
+        _showAccountModal = true;
+    }
+
+    private void CloseAccountModal()
+    {
+        _showAccountModal = false;
+    }
+
+    private void OpenTransactionModal(CashFlowDirection direction)
+    {
+        if (!_ledger.Accounts.Any())
+            return;
+
+        if (string.IsNullOrWhiteSpace(_newTransaction.AccountId) || !_ledger.Accounts.Any(a => a.Id == _newTransaction.AccountId))
+        {
+            PrepareNewTransaction();
+        }
+
+        _newTransaction.Direction = direction;
+        _showTransactionModal = true;
+    }
+
+    private void CloseTransactionModal()
+    {
+        _showTransactionModal = false;
+    }
+
     private async Task AddAccount()
     {
         if (!CanAddAccount)
@@ -323,6 +442,7 @@
 
         _newAccount = new TrackedAccount();
         _newAccountOpeningBalance = string.Empty;
+        _showAccountModal = false;
 
         PrepareNewTransaction();
         await PersistLedger();
@@ -349,6 +469,7 @@
             AccountId = accountId
         };
         _newTransactionAmount = string.Empty;
+        _showTransactionModal = false;
 
         await PersistLedger();
     }
@@ -376,6 +497,8 @@
         _newAccount = new TrackedAccount();
         _newAccountOpeningBalance = string.Empty;
         _newTransactionAmount = string.Empty;
+        _showAccountModal = false;
+        _showTransactionModal = false;
         PrepareNewTransaction();
         await StorageService.ClearAccountLedgerAsync();
     }
