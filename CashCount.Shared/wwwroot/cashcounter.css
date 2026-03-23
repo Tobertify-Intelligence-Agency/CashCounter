@@ -3404,6 +3404,8 @@
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
     padding: 1rem 1.1rem;
     border-radius: calc(var(--radius) + 2px);
     background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
@@ -3416,12 +3418,15 @@
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    opacity: 0.78;
+    opacity: 0.78;    
+    text-align: right;
+    
 }
 
 .cc-total-footer-amount {
     font-size: clamp(1.5rem, 5vw, 2.25rem);
     line-height: 1;
+    text-align: right;
 }
 
 .cc-action-buttons {
@@ -3812,6 +3817,7 @@
 
 .cc-hero-card .cc-total-footer-amount {
     color: var(--text-primary);
+    text-align: right;
 }
 
 .cc-toolbar-card,

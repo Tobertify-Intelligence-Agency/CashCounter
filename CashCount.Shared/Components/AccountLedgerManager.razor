@@ -7,42 +7,8 @@
 @implements IDisposable
 
 <section class="af-management-shell af-management-shell-minimal">
-    <section class="af-header-card af-management-header af-management-header-minimal">
-        <div>
-            <p class="af-eyebrow">@Text["ledger.hero.eyebrow"]</p>
-            <h2>@Text["ledger.hero.title"]</h2>
-            <p class="af-subtitle">@Text["ledger.hero.body"]</p>
-        </div>
 
-        <div class="af-header-actions af-header-actions-tight">
-            <select class="af-select af-currency-select" @onchange="OnCurrencyChanged">
-                @foreach (var currency in _currencies)
-                {
-                    <option value="@currency.Symbol" selected="@(_ledger.CurrencySymbol == currency.Symbol)">@currency.Label</option>
-                }
-            </select>
-            <button class="btn-save af-header-cta" @onclick="OpenAccountModal">@Text["ledger.create"]</button>
-            <button class="btn-clear" @onclick="ResetLedger" disabled="@(!_ledger.Accounts.Any() && !_ledger.Transactions.Any())">@Text["ledger.reset"]</button>
-        </div>
-    </section>
 
-    <div class="af-dashboard-grid af-dashboard-grid-compact af-dashboard-grid-minimal">
-        <div class="af-stat-card primary">
-            <span class="af-stat-label">@Text["ledger.stats.accounts"]</span>
-            <strong>@_ledger.Accounts.Count</strong>
-            <small>@Text.Format("ledger.stats.liveBalance", FormatAmount(_ledger.TotalBalance))</small>
-        </div>
-        <div class="af-stat-card neutral">
-            <span class="af-stat-label">@Text["ledger.stats.opening"]</span>
-            <strong>@FormatAmount(_ledger.TotalOpeningBalance)</strong>
-            <small>@Text["ledger.stats.openingBody"]</small>
-        </div>
-        <div class="af-stat-card success">
-            <span class="af-stat-label">@Text["ledger.stats.transactions"]</span>
-            <strong>@_ledger.Transactions.Count</strong>
-            <small>@Text["ledger.stats.transactionsBody"]</small>
-        </div>
-    </div>
 
     <div class="af-content-grid af-management-grid af-management-grid-minimal">
         <section class="af-panel af-panel-dense">
@@ -92,51 +58,19 @@
             {
                 <div class="tc-empty-state af-inline-empty af-inline-empty-card">
                     <span class="tc-empty-icon">🏦</span>
-                    <p>@Text["ledger.empty.body"]</p>
-                    <button class="btn-save af-empty-action" @onclick="OpenAccountModal">@Text["ledger.empty.action"]</button>
+                    <p>@Text["ledger.empty.body"]</p>                    
                 </div>
             }
+
         </section>
 
-        <section class="af-panel af-management-side-panel af-panel-dense">
-            <div class="af-panel-header af-panel-header-minimalized">
-                <div>
-                    <h3>@Text["ledger.guide.title"]</h3>
-                    <p>@Text["ledger.guide.body"]</p>
-                </div>
-            </div>
-
-            <div class="af-management-notes af-management-notes-tight">
-                <div class="af-management-note">
-                    <span class="af-summary-label">@Text["ledger.step1.title"]</span>
-                    <p>@Text["ledger.step1.body"]</p>
-                </div>
-                <div class="af-management-note">
-                    <span class="af-summary-label">@Text["ledger.step2.title"]</span>
-                    <p>@Text["ledger.step2.body"]</p>
-                </div>
-                <div class="af-management-note">
-                    <span class="af-summary-label">@Text["ledger.step3.title"]</span>
-                    <p>@Text["ledger.step3.body"]</p>
-                </div>
-            </div>
-
-            <div class="af-panel-summary af-panel-summary-dense">
-                <div>
-                    <span class="af-summary-label">@Text["ledger.currentCurrency"]</span>
-                    <strong>@_ledger.CurrencySymbol</strong>
-                </div>
-                <div>
-                    <span class="af-summary-label">@Text["ledger.latestTransaction"]</span>
-                    <strong>@(_ledger.Transactions.OrderByDescending(t => t.Date).FirstOrDefault()?.Date.ToString("d", Text.CurrentCulture) ?? "—")</strong>
-                </div>
-                <div>
-                    <span class="af-summary-label">@Text["ledger.nextAction"]</span>
-                    <strong>@(_ledger.Accounts.Any() ? Text["ledger.nextAction.funds"] : Text["ledger.nextAction.create"])</strong>
-                </div>
-            </div>
-
-            <a class="btn-clear af-link-btn af-management-link" href="/funds">@Text["ledger.openFunds"]</a>
+        <section class="af-header-card af-management-header af-management-header-minimal">            
+                <select class="af-select af-currency-select" @onchange="OnCurrencyChanged">
+                    @foreach (var currency in _currencies)
+                    {
+                        <option value="@currency.Symbol" selected="@(_ledger.CurrencySymbol == currency.Symbol)">@currency.Label</option>
+                    }
+                </select>              
         </section>
     </div>
 </section>
@@ -147,11 +81,8 @@
         <div class="af-modal-card" @onclick:stopPropagation="true">
             <div class="af-modal-header">
                 <div>
-                    <p class="af-modal-eyebrow">@Text["ledger.modal.eyebrow"]</p>
-                    <h3>@Text["ledger.modal.title"]</h3>
-                    <p>@Text["ledger.modal.body"]</p>
-                </div>
-                <button class="af-modal-close" @onclick="CloseAccountModal" aria-label="Close">✕</button>
+                    <p class="af-modal-eyebrow">@Text["ledger.modal.eyebrow"]</p>                                       
+                </div>               
             </div>
 
             <div class="af-form-grid compact">
@@ -167,8 +98,9 @@
             </div>
 
             <div class="af-modal-actions">
-                <button class="btn-clear" @onclick="CloseAccountModal">@Text["app.cancel"]</button>
                 <button class="btn-save" @onclick="AddAccount" disabled="@(!CanAddAccount)">@Text["ledger.createButton"]</button>
+                <button class="btn-clear" @onclick="CloseAccountModal">@Text["app.cancel"]</button>
+                
             </div>
         </div>
     </div>

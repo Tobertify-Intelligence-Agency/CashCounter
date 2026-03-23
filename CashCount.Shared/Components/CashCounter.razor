@@ -8,37 +8,12 @@
 @implements IDisposable
 
 <div class="cash-counter cash-counter-compact">
-    @if (_selectedCurrency != null)
-    {
-        <section class="cc-hero-card cc-hero-card-minimal" aria-live="polite">
-            <div class="cc-hero-copy">
-                <span class="cc-toolbar-label">@Text["cashCounter.totalSummary"]</span>
-                <strong class="cc-total-footer-amount">@FormatAmount(CalculateTotal())</strong>
-            </div>
-            <div class="cc-hero-meta-grid">
-                <div class="cc-meta-chip">
-                    <span class="cc-toolbar-label">@Text["cashCounter.banknotes"]</span>
-                    <strong>@FormatAmount(CalculateBanknotesTotal())</strong>
-                </div>
-                <div class="cc-meta-chip">
-                    <span class="cc-toolbar-label">@Text["cashCounter.coins"]</span>
-                    <strong>@FormatAmount(CalculateCoinsTotal())</strong>
-                </div>
-                <div class="cc-meta-chip">
-                    <span class="cc-toolbar-label">@Text["app.currency"]</span>
-                    <strong>@_selectedCurrency.Symbol @_selectedCurrency.Code</strong>
-                </div>
-            </div>
-        </section>
-    }
+
 
     @if (_canSelectCurrency)
     {
         <section class="cc-toolbar-card">
-            <div>
-                <span class="cc-toolbar-label">@Text["app.currency"]</span>
-                <strong class="cc-locked-value">@_selectedCurrency?.Symbol @_selectedCurrency?.Name</strong>
-            </div>
+
             <select id="currency" class="cc-toolbar-select" @onchange="OnCurrencyChanged">
                 @foreach (var currency in _currencies)
                 {
@@ -47,16 +22,6 @@
                     </option>
                 }
             </select>
-        </section>
-    }
-    else
-    {
-        <section class="cc-toolbar-card cc-toolbar-card-locked">
-            <div>
-                <span class="cc-toolbar-label">@Text["cashCounter.currencyFixed"]</span>
-                <strong class="cc-locked-value">@_selectedCurrency?.Symbol @_selectedCurrency?.Name</strong>
-            </div>
-            <span class="premium-badge" title="@Text["cashCounter.premium.currencyLockedHint"]">@Text["cashCounter.premium.currencyLocked"]</span>
         </section>
     }
 
@@ -148,7 +113,7 @@
         {
             <div class="premium-feature-locked">
                 <span class="lock-icon">🔒</span>
-                <span class="lock-text">@Text["cashCounter.saveLocked"]</span>
+                <span class="lock-text">@Text["cashCounter.saveLocked"] & @Text["cashCounter.premium.currencyLocked"]</span>
                 <span class="premium-badge" title="@Text["cashCounter.saveLockedHint"]">Premium</span>
             </div>
         }
