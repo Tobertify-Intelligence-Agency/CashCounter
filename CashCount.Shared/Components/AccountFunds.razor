@@ -32,9 +32,10 @@
         <details class="af-panel af-collapsible-panel" open>
             <summary class="af-collapsible-summary">
                 <div class="af-section-heading-row af-collapsible-heading">
-                    <div>
-                        <h3>@Text["funds.accounts.title"]    |   @FormatAmount(_ledger.TotalBalance)</h3>
-                    </div>                   
+                    <div class="af-heading-copy">
+                        <h3>@Text["funds.accounts.title"]</h3>
+                    </div>
+                    <span class="af-heading-metric @(_ledger.TotalBalance >= 0 ? "positive" : "negative")">@FormatAmount(_ledger.TotalBalance)</span>
                 </div>
             </summary>
 
@@ -63,9 +64,10 @@
         <details class="af-panel af-visual-panel af-collapsible-panel" open>
             <summary class="af-collapsible-summary">
                 <div class="af-section-heading-row af-section-heading-row-tight af-collapsible-heading">
-                    <div>
-                        <h3>@Text["funds.flow.title"]   |   @FormatAmount(_ledger.NetFlow)</h3>
-                    </div>                
+                    <div class="af-heading-copy">
+                        <h3>@Text["funds.flow.title"]</h3>
+                    </div>
+                    <span class="af-heading-metric @(_ledger.NetFlow >= 0 ? "positive" : "negative")">@FormatSignedAmount(_ledger.NetFlow)</span>
                 </div>
             </summary>
 

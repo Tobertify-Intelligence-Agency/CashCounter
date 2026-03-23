@@ -2920,6 +2920,35 @@
     margin-bottom: 1rem;
 }
 
+.af-heading-copy {
+    min-width: 0;
+}
+
+.af-heading-metric {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    background: #f8fafc;
+    border: 1px solid var(--border-color);
+    font-weight: 700;
+    white-space: nowrap;
+    line-height: 1;
+}
+
+.af-heading-metric.positive {
+    color: #16a34a;
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+}
+
+.af-heading-metric.negative {
+    color: #d4576b;
+    background: #fff1f2;
+    border-color: #fbc5d1;
+}
+
 .af-flow-badge {
     display: inline-flex;
     align-items: center;

@@ -43,9 +43,17 @@
         </div>
 
         <div class="tc-summary tc-summary-minimal">
+            <div class="tc-summary-item income">
+                <span class="tc-summary-label">@Text["travel.summary.income"]</span>
+                <span class="tc-summary-amount">@FormatAmount(_collection.TotalIncome)</span>
+            </div>
             <div class="tc-summary-item expenses">
                 <span class="tc-summary-label">@Text["travel.summary.expenses"]</span>
                 <span class="tc-summary-amount">@FormatAmount(_collection.TotalExpenses)</span>
+            </div>
+            <div class="tc-summary-item balance @(_collection.Balance >= 0 ? "positive" : "negative")">
+                <span class="tc-summary-label">@Text["travel.summary.balance"]</span>
+                <span class="tc-summary-amount">@FormatSignedAmount(_collection.Balance)</span>
             </div>
         </div>
     </section>
@@ -53,6 +61,14 @@
     <section class="tc-add-card tc-add-card-minimal">
 
         <div class="tc-form tc-form-compact">
+            <div class="tc-segmented-toggle tc-segmented-toggle-compact" role="group" aria-label="Entry type">
+                <button type="button"
+                        class="tc-segmented-btn @(_newEntry.Type == EntryType.Expense ? "active expense" : string.Empty)"
+                        @onclick='() => _newEntry.Type = EntryType.Expense'>@Text["travel.type.expense"]</button>
+                <button type="button"
+                        class="tc-segmented-btn @(_newEntry.Type == EntryType.Income ? "active income" : string.Empty)"
+                        @onclick='() => _newEntry.Type = EntryType.Income'>@Text["travel.type.income"]</button>
+            </div>
 
             <div class="tc-form-grid-minimal">
                 <label class="tc-field-block">
@@ -94,10 +110,10 @@
                 </label>
             </div>
 
-            <button class="tc-btn-add @("expense")"
+            <button class="tc-btn-add @(_newEntry.Type == EntryType.Income ? "income" : "expense")"
                     @onclick="AddEntry"
                     disabled="@(!CanAdd)">
-                @Text.Format("travel.addButton", Text["travel.type.expense"])
+                @Text.Format("travel.addButton", _newEntry.Type == EntryType.Income ? Text["travel.type.income"] : Text["travel.type.expense"])
             </button>
         </div>
     </section>
@@ -108,14 +124,22 @@
             <div class="tc-entries-header tc-entries-header-minimal">
                 <div>
                     <h3 class="tc-section-title tc-section-title-plain">@Text["travel.list.title"]</h3>
-                    <p>@_collection.Entries.Count @Text["travel.hero.entries"]</p>
+                    <p>@(IsFiltering ? $"{FilteredEntryCount} / {_collection.Entries.Count}" : _collection.Entries.Count.ToString()) @Text["travel.hero.entries"]</p>
                 </div>
+                @if (HasMultipleEntryTypes)
+                {
+                    <div class="tc-filter-row">
+                        <button class="tc-filter-btn @(_filter == null ? "active" : string.Empty)" @onclick='() => _filter = null'>@Text["travel.filter.all"]</button>
+                        <button class="tc-filter-btn income @(_filter == EntryType.Income ? "active" : string.Empty)" @onclick='() => _filter = EntryType.Income'>@Text["travel.filter.income"]</button>
+                        <button class="tc-filter-btn expense @(_filter == EntryType.Expense ? "active" : string.Empty)" @onclick='() => _filter = EntryType.Expense'>@Text["travel.filter.expenses"]</button>
+                    </div>
+                }
             </div>
 
             <div class="tc-entries-list tc-entries-list-dense">
                 @foreach (var entry in FilteredEntries)
                 {
-                    <div class="tc-entry @("expense") tc-entry-dense">
+                    <div class="tc-entry @(entry.Type == EntryType.Income ? "income" : "expense") tc-entry-dense">
                         <div class="tc-entry-type-bar"></div>
                         <div class="tc-entry-body">
                             <div class="tc-entry-top">
@@ -129,8 +153,8 @@
                                         <span class="tc-entry-date">@entry.Date.ToString("d", Text.CurrentCulture)</span>
                                     </div>
                                 </div>
-                                <span class="tc-entry-amount @("expense")">
-                                    @("-")@FormatAmount(entry.Amount, includeSignSymbol: false)
+                                <span class="tc-entry-amount @(entry.Type == EntryType.Income ? "income" : "expense")">
+                                    @(entry.Type == EntryType.Income ? "+" : "-")@FormatAmount(entry.Amount, includeSignSymbol: false)
                                 </span>
                             </div>
                             <div class="tc-entry-bottom tc-entry-bottom-dense">
@@ -278,6 +302,12 @@
             ? _collection.Entries.OrderByDescending(e => e.Date)
             : _collection.Entries.Where(e => e.Type == _filter).OrderByDescending(e => e.Date);
 
+    private bool IsFiltering => _filter != null;
+    private int FilteredEntryCount => _filter == null ? _collection.Entries.Count : _collection.Entries.Count(e => e.Type == _filter);
+    private bool HasMultipleEntryTypes =>
+        _collection.Entries.Any(e => e.Type == EntryType.Income) &&
+        _collection.Entries.Any(e => e.Type == EntryType.Expense);
+
     private void AddEntry()
     {
         if (!decimal.TryParse(_newEntryAmountStr, System.Globalization.NumberStyles.Any,
@@ -320,8 +350,14 @@
 
     private string FormatAmount(decimal amount, bool includeSignSymbol = true)
     {
-        var number = amount.ToString("N2", Text.CurrentCulture);
+        var number = Math.Abs(amount).ToString("N2", Text.CurrentCulture);
         return includeSignSymbol ? $"{_collection.CurrencySymbol} {number}" : $"{_collection.CurrencySymbol} {number}";
+    }
+
+    private string FormatSignedAmount(decimal amount)
+    {
+        var prefix = amount >= 0 ? "+" : "-";
+        return $"{prefix}{FormatAmount(amount, includeSignSymbol: false)}";
     }
 
     public void Dispose()
