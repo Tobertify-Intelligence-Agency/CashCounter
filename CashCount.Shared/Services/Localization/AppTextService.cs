@@ -19,7 +19,7 @@ public sealed class AppTextService : IAppTextService
         ["en"] = new(StringComparer.OrdinalIgnoreCase)
         {
             ["app.tools"] = "Tools",
-            ["app.version"] = "v1.0.16",
+            ["app.version"] = "v1.0.17",
             ["app.language"] = "Language",
             ["app.languageShort"] = "Lang",
             ["app.currency"] = "Currency",
