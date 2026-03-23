@@ -4044,7 +4044,7 @@
     }
 
     .cc-total-footer-shell {
-        padding-bottom: calc(var(--cc-total-bar-offset) + 0.1rem);
+        margin-bottom: 0.55rem;
     }
 
     .cc-denomination-grid {
