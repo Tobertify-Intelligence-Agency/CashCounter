@@ -19,7 +19,7 @@ public sealed class AppTextService : IAppTextService
         ["en"] = new(StringComparer.OrdinalIgnoreCase)
         {
             ["app.tools"] = "Tools",
-            ["app.version"] = "v1.1",
+            ["app.version"] = "v1.0.8",
             ["app.language"] = "Language",
             ["app.languageShort"] = "Lang",
             ["app.currency"] = "Currency",
@@ -210,7 +210,7 @@ public sealed class AppTextService : IAppTextService
         ["de"] = new(StringComparer.OrdinalIgnoreCase)
         {
             ["app.tools"] = "Tools",
-            ["app.version"] = "v1.1",
+            ["app.version"] = "v1.0.8",
             ["app.language"] = "Sprache",
             ["app.languageShort"] = "Sprache",
             ["app.currency"] = "Währung",

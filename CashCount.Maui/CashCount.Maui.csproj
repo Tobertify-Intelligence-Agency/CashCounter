@@ -18,9 +18,9 @@
         <!-- App Identifier -->
         <ApplicationId>com.tobertify.cashcounter</ApplicationId>
 
-        <!-- Versions -->
-        <ApplicationDisplayVersion>1.0.5</ApplicationDisplayVersion>
-        <ApplicationVersion>6</ApplicationVersion>
+        <!-- Versions: bump both values for future meaningful pushed app changes -->
+        <ApplicationDisplayVersion>1.0.8</ApplicationDisplayVersion>
+        <ApplicationVersion>8</ApplicationVersion>
 
         <WindowsPackageType>None</WindowsPackageType>
     </PropertyGroup>

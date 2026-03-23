@@ -3320,9 +3320,16 @@
 
 .cc-denomination-top {
     display: flex;
+    justify-content: flex-end;
+}
+
+.cc-denomination-meta {
+    display: inline-flex;
     align-items: flex-start;
-    justify-content: space-between;
+    justify-content: flex-end;
     gap: 0.35rem;
+    margin-left: auto;
+    text-align: right;
 }
 
 .cc-denomination-top .denom-name,
@@ -3669,13 +3676,8 @@
         min-width: 0;
     }
 
-    .cc-denomination-top {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .cc-denomination-top .denom-subtotal {
-        text-align: left;
+    .cc-denomination-meta {
+        width: 100%;
     }
 
     .cc-denomination-grid {

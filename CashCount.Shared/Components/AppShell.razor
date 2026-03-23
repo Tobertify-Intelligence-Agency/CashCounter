@@ -42,15 +42,6 @@
                 <span class="hamburger-icon">&#9776;</span>
             </button>
             <h1 class="current-tool-name">@GetCurrentToolName()</h1>
-            <div class="app-language-switcher app-language-switcher-top">
-                <label for="top-language">@Text["app.languageShort"]</label>
-                <select id="top-language" class="app-language-select" value="@Text.CurrentLanguage.Code" @onchange="OnLanguageChanged">
-                    @foreach (var language in Text.Languages)
-                    {
-                        <option value="@language.Code">@language.Code.ToUpperInvariant()</option>
-                    }
-                </select>
-            </div>
         </header>
         <div class="content-area">
             @ChildContent

@@ -48,8 +48,10 @@
                     {
                         <div class="denomination-card banknote cc-denomination-card">
                             <div class="cc-denomination-top">
-                                <span class="denom-name">@note.DisplayName</span>
-                                <span class="denom-subtotal">@FormatAmount(note.Total)</span>
+                                <div class="cc-denomination-meta">
+                                    <span class="denom-name">@note.DisplayName</span>
+                                    <span class="denom-subtotal">@FormatAmount(note.Total)</span>
+                                </div>
                             </div>
                             <div class="quantity-controls cc-quantity-controls">
                                 <button class="btn-minus" @onclick="() => Decrement(note)" disabled="@(note.Quantity <= 0)">-</button>
@@ -73,8 +75,10 @@
                     {
                         <div class="denomination-card coin cc-denomination-card cc-denomination-card-coin">
                             <div class="cc-denomination-top">
-                                <span class="denom-name">@coin.DisplayName</span>
-                                <span class="denom-subtotal">@FormatAmount(coin.Total)</span>
+                                <div class="cc-denomination-meta">
+                                    <span class="denom-name">@coin.DisplayName</span>
+                                    <span class="denom-subtotal">@FormatAmount(coin.Total)</span>
+                                </div>
                             </div>
                             <div class="quantity-controls cc-quantity-controls">
                                 <button class="btn-minus" @onclick="() => Decrement(coin)" disabled="@(coin.Quantity <= 0)">-</button>
