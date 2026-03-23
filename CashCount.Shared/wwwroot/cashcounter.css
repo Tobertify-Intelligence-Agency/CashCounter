@@ -3223,12 +3223,6 @@
     padding-bottom: 2rem;
 }
 
-.cash-counter-compact {
-    --cc-total-bar-offset: max(0.75rem, env(safe-area-inset-bottom, 0px));
-    --cc-total-bar-space: clamp(5.25rem, 12vh, 7rem);
-    padding-bottom: calc(var(--cc-total-bar-space) + 1rem);
-}
-
 .cc-hero-card,
 .tc-hero-card-minimal,
 .cc-toolbar-card,
@@ -3405,28 +3399,18 @@
     font-size: 0.95rem;
 }
 
-.cc-total-footer-shell {
-    position: sticky;
-    bottom: 0;
-    z-index: 30;
-    margin: 0 0 0.8rem;
-    padding-bottom: var(--cc-total-bar-offset);
-    pointer-events: none;
-}
-
 .cc-total-footer-card {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
-    margin: 0;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
     padding: 1rem 1.1rem;
-    border-radius: calc(var(--radius) + 4px);
-    background: linear-gradient(135deg, rgba(15, 23, 42, 0.96) 0%, rgba(30, 58, 138, 0.96) 100%);
+    border-radius: calc(var(--radius) + 2px);
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
     color: white;
-    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.24);
-    backdrop-filter: blur(16px);
-    pointer-events: auto;
+    box-shadow: var(--shadow-lg);
 }
 
 .cc-total-footer-label {
@@ -3714,15 +3698,6 @@
     .cc-total-footer-card {
         flex-direction: column;
         align-items: stretch;
-    }
-
-    .cc-total-footer-shell {
-        margin-bottom: 0.7rem;
-    }
-
-    .cc-total-footer-label,
-    .cc-total-footer-amount {
-        text-align: left;
     }
 
     .cc-toolbar-select {
@@ -4031,11 +4006,7 @@
     .account-funds-minimal,
     .af-management-shell-minimal {
         gap: 0.75rem;
-    }
-
-    .cash-counter-compact {
-        --cc-total-bar-offset: max(0.35rem, env(safe-area-inset-bottom, 0px));
-        --cc-total-bar-space: 4.75rem;
+        padding-bottom: 1rem;
     }
 
     .cc-sections-compact {
@@ -4043,8 +4014,10 @@
         gap: 0.7rem;
     }
 
-    .cc-total-footer-shell {
-        margin-bottom: 0.55rem;
+    .cc-total-footer-card {
+        position: sticky;
+        bottom: 0;
+        z-index: 20;
     }
 
     .cc-denomination-grid {

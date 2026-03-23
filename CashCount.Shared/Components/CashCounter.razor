@@ -27,13 +27,6 @@
 
     @if (_selectedCurrency != null)
     {
-        <section class="cc-total-footer-shell" aria-live="polite">
-            <div class="cc-total-footer-card">
-                <span class="cc-total-footer-label">@Text["cashCounter.totalSummary"]</span>
-                <strong class="cc-total-footer-amount">@FormatAmount(CalculateTotal())</strong>
-            </div>
-        </section>
-
         <div class="denomination-sections cc-sections-compact">
             <section class="denomination-section banknotes cc-section-card">
                 <div class="cc-section-header">
@@ -85,6 +78,11 @@
                 </div>
             </section>
         </div>
+
+        <section class="cc-total-footer-card" aria-live="polite">
+            <span class="cc-total-footer-label">@Text["cashCounter.totalSummary"]</span>
+            <strong class="cc-total-footer-amount">@FormatAmount(CalculateTotal())</strong>
+        </section>
 
         <div class="action-buttons cc-action-buttons">
             <button class="btn-clear" @onclick="ClearAll">@Text["cashCounter.clearAll"]</button>
