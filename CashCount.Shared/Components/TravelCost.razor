@@ -47,10 +47,20 @@
                 <span class="tc-summary-label">@Text["travel.summary.expenses"]</span>
                 <span class="tc-summary-amount">@FormatAmount(_collection.TotalExpenses)</span>
             </div>
+            <div class="tc-summary-item balance positive tc-summary-item-neutral">
+                <span class="tc-summary-label">@Text["app.currency"]</span>
+                <span class="tc-summary-amount">@_collection.CurrencySymbol</span>
+            </div>
         </div>
     </section>
 
     <section class="tc-add-card tc-add-card-minimal">
+        <div class="tc-section-header-compact">
+            <div>
+                <h3 class="tc-section-title tc-section-title-plain">@Text.Format("travel.addButton", Text["travel.type.expense"])</h3>
+                <p>@Text["travel.empty.body"]</p>
+            </div>
+        </div>
         <div class="tc-form tc-form-compact">
             <div class="tc-form-grid-minimal">
                 <label class="tc-field-block">
@@ -108,6 +118,7 @@
                     <h3 class="tc-section-title tc-section-title-plain">@Text["travel.list.title"]</h3>
                     <p>@_collection.Entries.Count @Text["travel.hero.entries"]</p>
                 </div>
+                <span class="count-badge">@FormatAmount(_collection.TotalExpenses)</span>
             </div>
 
             <div class="tc-entries-list tc-entries-list-dense">

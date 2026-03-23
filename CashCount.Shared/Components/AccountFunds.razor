@@ -8,10 +8,20 @@
 @implements IDisposable
 
 <div class="account-funds account-funds-minimal">
-    <section class="af-hero-strip">
-        <div>            
-            
+    <section class="af-header-card af-header-card-dashboard af-funds-hero-card">
+        <div class="af-funds-hero-copy">
+            <p class="af-eyebrow">@Text["tool.funds"]</p>
+            <h2 class="af-hero-balance">@FormatAmount(_ledger.TotalBalance)</h2>
+            <div class="af-hero-meta">
+                <span>@Text.Format("ledger.accounts.total", _ledger.Accounts.Count)</span>
+                <span>@Text.Format("funds.recent.total", _ledger.Transactions.Count)</span>
+                <span class="@(_ledger.NetFlow >= 0 ? "positive" : "negative")">@FormatSignedAmount(_ledger.NetFlow)</span>
+            </div>
         </div>
+        @if (_ledger.Accounts.Any())
+        {
+            <a class="btn-clear af-link-btn af-manage-link" href="/account">@Text["ledger.create"]</a>
+        }
     </section>
 
     @if (!_ledger.Accounts.Any())
@@ -34,6 +44,7 @@
                 <div class="af-section-heading-row af-collapsible-heading">
                     <div class="af-heading-copy">
                         <h3>@Text["funds.accounts.title"]</h3>
+                        <p>@Text["funds.accounts.body"]</p>
                     </div>
                     <span class="af-heading-metric @(_ledger.TotalBalance >= 0 ? "positive" : "negative")">@FormatAmount(_ledger.TotalBalance)</span>
                 </div>
@@ -66,6 +77,7 @@
                 <div class="af-section-heading-row af-section-heading-row-tight af-collapsible-heading">
                     <div class="af-heading-copy">
                         <h3>@Text["funds.flow.title"]</h3>
+                        <p>@Text["funds.flow.body"]</p>
                     </div>
                     <span class="af-heading-metric @(_ledger.NetFlow >= 0 ? "positive" : "negative")">@FormatSignedAmount(_ledger.NetFlow)</span>
                 </div>
@@ -100,7 +112,8 @@
             <summary class="af-collapsible-summary">
                 <div class="af-panel-header af-panel-header-minimal af-collapsible-heading">
                     <div>
-                        <h3>@Text["funds.categoryOverview.title"]</h3>                   
+                        <h3>@Text["funds.categoryOverview.title"]</h3>
+                        <p>@Text["funds.categoryOverview.body"]</p>
                     </div>
                 </div>
             </summary>
@@ -154,7 +167,8 @@
             <summary class="af-collapsible-summary">
                 <div class="af-panel-header af-panel-header-minimal af-collapsible-heading">
                     <div>
-                        <h3>@Text["funds.recent.title"]</h3>                   
+                        <h3>@Text["funds.recent.title"]</h3>
+                        <p>@Text["funds.recent.body"]</p>
                     </div>
                     <span class="count-badge">@Text.Format("funds.recent.total", _ledger.Transactions.Count)</span>
                 </div>

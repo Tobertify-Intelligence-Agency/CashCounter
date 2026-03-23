@@ -3769,3 +3769,274 @@
         height: 3.5rem;
     }
 }
+
+
+/* ============================================================
+   Cohesive responsiveness + hierarchy polish
+   ============================================================ */
+
+:root {
+    --page-max-width: 1100px;
+    --page-gutter: clamp(0.75rem, 2vw, 1.5rem);
+    --section-gap: clamp(0.9rem, 2vw, 1.25rem);
+}
+
+.content-area {
+    padding: var(--page-gutter);
+}
+
+.cash-counter,
+.travel-cost,
+.account-container,
+.account-funds,
+.af-management-shell,
+.saved-counts {
+    width: 100%;
+    max-width: var(--page-max-width);
+    padding: 0;
+}
+
+.cash-counter-compact,
+.travel-cost-minimal,
+.account-container-minimal,
+.account-funds-minimal,
+.af-management-shell-minimal {
+    gap: var(--section-gap);
+}
+
+.cc-hero-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.cc-hero-card .cc-total-footer-amount {
+    color: var(--text-primary);
+}
+
+.cc-toolbar-card,
+.tc-add-card-minimal,
+.tc-entries-card-minimal,
+.tc-save-card,
+.account-card-minimal,
+.account-section-card,
+.af-funds-hero-card,
+.af-panel-dense,
+.af-panel,
+.not-signed-in-minimal {
+    border: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.account-section-card {
+    background: var(--card-bg);
+    border-radius: calc(var(--radius) + 2px);
+    box-shadow: var(--shadow);
+    padding: 1rem;
+}
+
+.account-section-card .af-management-shell {
+    max-width: none;
+    padding: 0;
+}
+
+.account-section-card .af-management-header {
+    margin-top: 0;
+}
+
+.af-funds-hero-card {
+    background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%);
+    border-color: #dbeafe;
+}
+
+.af-funds-hero-copy {
+    min-width: 0;
+}
+
+.af-funds-hero-card .btn-clear {
+    min-width: 0;
+}
+
+.tc-summary-item-neutral {
+    background: #f8fafc;
+    border: 1px solid var(--border-color);
+}
+
+.tc-summary-item-neutral .tc-summary-amount {
+    color: var(--text-primary);
+}
+
+.tc-entry,
+.af-account-card,
+.af-category-item,
+.af-management-note,
+.af-visual-card,
+.af-panel-summary > div,
+.af-inline-empty-card {
+    border-color: rgba(148, 163, 184, 0.22);
+}
+
+.af-panel-header h3,
+.af-section-heading-row h3,
+.tc-section-title-plain,
+.account-card-minimal h3 {
+    line-height: 1.15;
+}
+
+.af-panel-header p,
+.af-section-heading-row p,
+.tc-section-header-compact p,
+.tc-entries-header-minimal p,
+.account-section-card p {
+    max-width: 52rem;
+}
+
+.af-modal-card-wide {
+    width: min(760px, 100%);
+}
+
+.af-form-grid select,
+.af-form-grid input,
+.af-select,
+.tc-input,
+.tc-currency-select,
+.cc-toolbar-select,
+.save-name-input {
+    min-height: 2.9rem;
+}
+
+.btn-save,
+.btn-clear,
+.btn-secondary,
+.btn-primary,
+.btn-upgrade,
+.btn-restore,
+.tc-btn-add {
+    min-height: 2.9rem;
+}
+
+@media (min-width: 701px) {
+    .account-container-minimal {
+        align-items: stretch;
+    }
+
+    .account-card-minimal,
+    .not-signed-in-minimal,
+    .account-section-card {
+        max-width: var(--page-max-width);
+        width: 100%;
+        margin: 0 auto;
+    }
+}
+
+@media (max-width: 900px) {
+    .content-area {
+        padding: 0.85rem;
+    }
+
+    .af-funds-hero-card,
+    .account-section-card {
+        padding: 0.95rem;
+    }
+}
+
+@media (max-width: 700px) {
+    .content-area {
+        padding: 0.7rem;
+    }
+
+    .top-bar {
+        padding-left: 0.85rem;
+        padding-right: 0.85rem;
+    }
+
+    .af-funds-hero-card,
+    .account-section-card,
+    .account-card-minimal,
+    .not-signed-in-minimal {
+        padding: 0.95rem;
+    }
+
+    .af-funds-hero-card,
+    .af-hero-strip,
+    .af-header-card,
+    .cc-toolbar-card,
+    .tc-entries-header-minimal {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .af-manage-link,
+    .btn-signout-inline {
+        width: 100%;
+        text-align: center;
+        justify-content: center;
+    }
+
+    .account-header-minimal {
+        gap: 0.85rem;
+    }
+
+    .profile-photo,
+    .profile-placeholder {
+        width: 56px;
+        height: 56px;
+    }
+}
+
+@media (orientation: landscape) and (max-height: 540px) {
+    .top-bar {
+        position: sticky;
+        padding-top: max(0.55rem, env(safe-area-inset-top, 0px));
+        padding-bottom: 0.55rem;
+    }
+
+    .content-area {
+        padding-top: 0.65rem;
+    }
+
+    .cash-counter-compact,
+    .travel-cost-minimal,
+    .account-container-minimal,
+    .account-funds-minimal,
+    .af-management-shell-minimal {
+        gap: 0.75rem;
+        padding-bottom: 1rem;
+    }
+
+    .cc-sections-compact {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.7rem;
+    }
+
+    .cc-total-footer-card {
+        position: sticky;
+        bottom: 0;
+        z-index: 20;
+    }
+
+    .cc-denomination-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .cc-denomination-grid-coins {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .tc-summary-minimal,
+    .af-dashboard-grid-minimal,
+    .af-visual-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (orientation: landscape) and (max-height: 420px) {
+    .cc-denomination-grid,
+    .cc-denomination-grid-coins {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .cc-quantity-controls button,
+    .cc-quantity-controls .quantity-input {
+        height: 38px;
+    }
+}
