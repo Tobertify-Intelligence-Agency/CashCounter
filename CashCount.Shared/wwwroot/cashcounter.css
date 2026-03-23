@@ -527,6 +527,10 @@
     overflow-y: auto;
 }
 
+.content-area:has(.cash-counter-compact) {
+    padding-bottom: 100px;
+}
+
 /* Desktop: Show menu permanently */
 @media (min-width: 769px) {
     .side-menu {
@@ -3216,7 +3220,10 @@
    New compact/mobile-first polish
    ============================================================ */
 
-.cash-counter-compact,
+.cash-counter-compact {
+    padding-bottom: 0;
+}
+
 .travel-cost-minimal,
 .account-container-minimal,
 .af-management-shell-minimal {
@@ -3226,7 +3233,6 @@
 .cc-hero-card,
 .tc-hero-card-minimal,
 .cc-toolbar-card,
-.cc-save-section,
 .tc-save-card,
 .account-card-minimal,
 .not-signed-in-minimal {
@@ -3272,9 +3278,8 @@
 
 .cc-toolbar-card {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
+    flex-direction: column;
+    gap: 0.5rem;
     padding: 0.9rem 1rem;
 }
 
@@ -3399,49 +3404,131 @@
     font-size: 0.95rem;
 }
 
-.cc-total-footer-card {
+.cc-sticky-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
-    margin-top: 0.5rem;
-    margin-bottom: 0.5rem;
-    padding: 1rem 1.1rem;
-    border-radius: calc(var(--radius) + 2px);
+    gap: 0.75rem;
+    padding: 0.75rem 1.1rem;
     background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
     color: white;
-    box-shadow: var(--shadow-lg);
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.25);
+}
+
+@media (min-width: 769px) {
+    .cc-sticky-footer {
+        left: 260px;
+    }
+}
+
+.cc-footer-total {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
 }
 
 .cc-total-footer-label {
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    opacity: 0.78;    
-    text-align: right;
-    
+    opacity: 0.7;
 }
 
 .cc-total-footer-amount {
-    font-size: clamp(1.5rem, 5vw, 2.25rem);
+    font-size: clamp(1.4rem, 5vw, 2rem);
     line-height: 1;
-    text-align: right;
+    font-weight: 800;
 }
 
-.cc-action-buttons {
-    padding-top: 0.2rem;
-    padding-bottom: 0;
+.cc-footer-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
 }
 
-.cc-action-buttons .btn-clear {
+/* Name input above toolbar */
+.cc-count-name {
+    margin: 0 0 0.4rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    cursor: pointer;
+    line-height: 1.2;
+    opacity: 0.6;
+    transition: opacity 0.15s;
+}
+
+.cc-count-name:hover {
+    opacity: 1;
+}
+
+.cc-name-input {
     width: 100%;
-    max-width: 100%;
-    padding: 0.8rem 1rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+    padding: 0.3rem 0.5rem;
+    border: 2px solid var(--primary-color);
+    border-radius: var(--radius-sm);
+    outline: none;
+    margin-bottom: 0.4rem;
+    background: var(--card-bg);
+    color: var(--text-primary);
 }
 
-.cc-save-section {
-    margin-top: 0;
+/* Circle action buttons in footer */
+.cc-circle-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s, opacity 0.15s, background 0.15s;
+    flex-shrink: 0;
+}
+
+.cc-circle-btn:active {
+    transform: scale(0.92);
+}
+
+.cc-circle-btn-save {
+    background: #10b981;
+    color: white;
+}
+
+.cc-circle-btn-save:hover:not(:disabled) {
+    background: #059669;
+}
+
+.cc-circle-btn-save:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.cc-circle-btn-save.cc-circle-success {
+    background: #059669;
+}
+
+.cc-circle-btn-clear {
+    background: rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.8);
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.cc-circle-btn-clear:hover {
+    background: rgba(255,255,255,0.22);
+    color: white;
 }
 
 .tc-hero-card-minimal {
@@ -3694,8 +3781,7 @@
         grid-template-columns: 1fr;
     }
 
-    .cc-toolbar-card,
-    .cc-total-footer-card {
+    .cc-toolbar-card {
         flex-direction: column;
         align-items: stretch;
     }
@@ -4006,18 +4092,22 @@
     .account-funds-minimal,
     .af-management-shell-minimal {
         gap: 0.75rem;
+    }
+
+    .cash-counter-compact {
+        padding-bottom: 100px;
+    }
+
+    .travel-cost-minimal,
+    .account-container-minimal,
+    .account-funds-minimal,
+    .af-management-shell-minimal {
         padding-bottom: 1rem;
     }
 
     .cc-sections-compact {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 0.7rem;
-    }
-
-    .cc-total-footer-card {
-        position: sticky;
-        bottom: 0;
-        z-index: 20;
     }
 
     .cc-denomination-grid {

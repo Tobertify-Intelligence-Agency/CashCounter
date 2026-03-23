@@ -238,7 +238,7 @@ public sealed class AppTextService : IAppTextService
             ["cashCounter.items"] = "Positionen",
             ["cashCounter.sectionTotalBanknotes"] = "Scheine gesamt",
             ["cashCounter.sectionTotalCoins"] = "Münzen gesamt",
-            ["cashCounter.savePlaceholder"] = "Namen zum Speichern eingeben (z. B. Montagszählung)",
+            ["cashCounter.savePlaceholder"] = "Zum Umbenennen tippen....",
             ["cashCounter.save"] = "Zählung speichern",
             ["cashCounter.savedSuccess"] = "Erfolgreich gespeichert!",
             ["cashCounter.saveLocked"] = "Zählungen speichern & laden",

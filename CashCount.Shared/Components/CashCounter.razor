@@ -10,18 +10,40 @@
 <div class="cash-counter cash-counter-compact">
 
 
-    @if (_canSelectCurrency)
+    @if (_canSaveCounts || _canSelectCurrency)
     {
-        <section class="cc-toolbar-card">
-
-            <select id="currency" class="cc-toolbar-select" @onchange="OnCurrencyChanged">
-                @foreach (var currency in _currencies)
+        <section class="cc-toolbar-card" style="margin-bottom: 1rem">
+            @if (_canSaveCounts)
+            {
+                @if (_editingName)
                 {
-                    <option value="@currency.Code" selected="@(_selectedCurrency?.Code == currency.Code)">
-                        @currency.Symbol @currency.Name
-                    </option>
+                    <input class="cc-name-input"
+                           @bind="_saveName"
+                           @bind:event="oninput"
+                           @onblur="StopEditingName"
+                           @onkeydown="OnNameKeyDown"
+                           placeholder="@Text["cashCounter.savePlaceholder"]"
+                           id="cc-name-field" />
                 }
-            </select>
+                else
+                {
+                    <h2 class="cc-count-name" @onclick="StartEditingName">
+                        @(string.IsNullOrWhiteSpace(_saveName) ? Text["cashCounter.savePlaceholder"] : _saveName)
+                    </h2>
+                }
+            }
+
+            @if (_canSelectCurrency)
+            {
+                <select id="currency" class="cc-toolbar-select" @onchange="OnCurrencyChanged">
+                    @foreach (var currency in _currencies)
+                    {
+                        <option value="@currency.Code" selected="@(_selectedCurrency?.Code == currency.Code)">
+                            @currency.Symbol @currency.Name
+                        </option>
+                    }
+                </select>
+            }
         </section>
     }
 
@@ -79,44 +101,24 @@
             </section>
         </div>
 
-        <section class="cc-total-footer-card" aria-live="polite">
-            <span class="cc-total-footer-label">@Text["cashCounter.totalSummary"]</span>
-            <strong class="cc-total-footer-amount">@FormatAmount(CalculateTotal())</strong>
-        </section>
-
-        <div class="action-buttons cc-action-buttons">
-            <button class="btn-clear" @onclick="ClearAll">@Text["cashCounter.clearAll"]</button>
-        </div>
-
-        @if (_canSaveCounts)
-        {
-            <div class="save-section cc-save-section">
-                <div class="save-input-group">
-                    <input type="text"
-                           @bind="_saveName"
-                           @bind:event="oninput"
-                           placeholder="@Text["cashCounter.savePlaceholder"]"
-                           class="save-name-input" />
-                    <button class="btn-save"
-                            @onclick="SaveCurrentCount"
-                            disabled="@(CalculateTotal() == 0)">
-                        @Text["cashCounter.save"]
-                    </button>
-                </div>
-                @if (_showSaveSuccess)
+        <footer class="cc-sticky-footer" aria-live="polite">
+            <div class="cc-footer-total">
+                <span class="cc-total-footer-label">@Text["cashCounter.totalSummary"]</span>
+                <strong class="cc-total-footer-amount">@FormatAmount(CalculateTotal())</strong>
+            </div>
+            <div class="cc-footer-actions">
+                @if (_canSaveCounts)
                 {
-                    <div class="save-success">@Text["cashCounter.savedSuccess"]</div>
+                    <button class="cc-circle-btn cc-circle-btn-save @(_showSaveSuccess ? "cc-circle-success" : "")"
+                            @onclick="SaveCurrentCount"
+                            disabled="@(CalculateTotal() == 0)"
+                            title="@Text["cashCounter.save"]">
+                        @(_showSaveSuccess ? "✓" : "💾")
+                    </button>
                 }
+                <button class="cc-circle-btn cc-circle-btn-clear" @onclick="ClearAll" title="@Text["cashCounter.clearAll"]">✕</button>
             </div>
-        }
-        else
-        {
-            <div class="premium-feature-locked">
-                <span class="lock-icon">🔒</span>
-                <span class="lock-text">@Text["cashCounter.saveLocked"] & @Text["cashCounter.premium.currencyLocked"]</span>
-                <span class="premium-badge" title="@Text["cashCounter.saveLockedHint"]">Premium</span>
-            </div>
-        }
+        </footer>
     }
 </div>
 
@@ -125,6 +127,7 @@
     private Currency? _selectedCurrency;
     private string _saveName = string.Empty;
     private bool _showSaveSuccess = false;
+    private bool _editingName = false;
 
     private bool _canSelectCurrency = false;
     private bool _canSaveCounts = false;
@@ -291,6 +294,24 @@
             return amount.ToString("N2", Text.CurrentCulture);
 
         return $"{_selectedCurrency.Symbol} {amount.ToString("N2", Text.CurrentCulture)}";
+    }
+
+    private void StartEditingName()
+    {
+        _editingName = true;
+        StateHasChanged();
+    }
+
+    private void StopEditingName()
+    {
+        _editingName = false;
+        StateHasChanged();
+    }
+
+    private void OnNameKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" || e.Key == "Escape")
+            StopEditingName();
     }
 
     public void Dispose()
