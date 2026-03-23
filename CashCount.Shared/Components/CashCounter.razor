@@ -8,25 +8,15 @@
 @implements IDisposable
 
 <div class="cash-counter cash-counter-compact">
-    <section class="cc-hero-card">
+    <section class="cc-hero-card cc-hero-card-minimal">
         <div>
             <p class="af-eyebrow">@Text["cashCounter.hero.title"]</p>
-            <h2 class="cc-hero-total">@FormatAmount(CalculateTotal())</h2>
-            <p class="cc-hero-subtitle">@Text["cashCounter.hero.subtitle"]</p>
         </div>
 
-        <div class="cc-hero-meta-grid">
+        <div class="cc-hero-meta-grid cc-hero-meta-grid-single">
             <div class="cc-meta-chip">
                 <span class="af-summary-label">@Text["app.currency"]</span>
                 <strong>@_selectedCurrency?.Symbol @_selectedCurrency?.Name</strong>
-            </div>
-            <div class="cc-meta-chip">
-                <span class="af-summary-label">@Text["cashCounter.banknotes"]</span>
-                <strong>@FormatAmount(CalculateBanknotesTotal())</strong>
-            </div>
-            <div class="cc-meta-chip">
-                <span class="af-summary-label">@Text["cashCounter.coins"]</span>
-                <strong>@FormatAmount(CalculateCoinsTotal())</strong>
             </div>
         </div>
     </section>
@@ -58,11 +48,6 @@
 
     @if (_selectedCurrency != null)
     {
-        <div class="cc-sticky-total">
-            <span class="cc-sticky-label">@Text["cashCounter.totalSummary"]</span>
-            <strong>@FormatAmount(CalculateTotal())</strong>
-        </div>
-
         <div class="denomination-sections cc-sections-compact">
             <section class="denomination-section banknotes cc-section-card">
                 <div class="cc-section-header">
@@ -70,7 +55,6 @@
                         <h2>@Text["cashCounter.banknotes"]</h2>
                         <p>@Text.Format("ledger.accounts.total", _selectedCurrency.Banknotes.Count)</p>
                     </div>
-                    <strong>@FormatAmount(CalculateBanknotesTotal())</strong>
                 </div>
                 <div class="denomination-grid cc-denomination-grid">
                     @foreach (var note in _selectedCurrency.Banknotes)
@@ -88,10 +72,6 @@
                         </div>
                     }
                 </div>
-                <div class="section-total">
-                    <span>@Text["cashCounter.sectionTotalBanknotes"]</span>
-                    <strong>@FormatAmount(CalculateBanknotesTotal())</strong>
-                </div>
             </section>
 
             <section class="denomination-section coins cc-section-card">
@@ -100,7 +80,6 @@
                         <h2>@Text["cashCounter.coins"]</h2>
                         <p>@Text.Format("ledger.accounts.total", _selectedCurrency.Coins.Count)</p>
                     </div>
-                    <strong>@FormatAmount(CalculateCoinsTotal())</strong>
                 </div>
                 <div class="denomination-grid cc-denomination-grid cc-denomination-grid-coins">
                     @foreach (var coin in _selectedCurrency.Coins)
@@ -117,10 +96,6 @@
                             </div>
                         </div>
                     }
-                </div>
-                <div class="section-total">
-                    <span>@Text["cashCounter.sectionTotalCoins"]</span>
-                    <strong>@FormatAmount(CalculateCoinsTotal())</strong>
                 </div>
             </section>
         </div>
@@ -158,6 +133,11 @@
         <div class="action-buttons cc-action-buttons">
             <button class="btn-clear" @onclick="ClearAll">@Text["cashCounter.clearAll"]</button>
         </div>
+
+        <section class="cc-total-footer-card" aria-live="polite">
+            <span class="cc-total-footer-label">@Text["cashCounter.totalSummary"]</span>
+            <strong class="cc-total-footer-amount">@FormatAmount(CalculateTotal())</strong>
+        </section>
     }
 </div>
 
