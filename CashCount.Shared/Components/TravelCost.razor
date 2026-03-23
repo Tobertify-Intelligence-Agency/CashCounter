@@ -11,7 +11,7 @@
     <section class="tc-hero-card tc-hero-card-minimal">
         <div class="tc-hero-top">
             <div>
-                <p class="af-eyebrow">@Text["travel.hero.eyebrow"]</p>
+               
                 @if (_editingName)
                 {
                     <input class="tc-name-input"
@@ -43,40 +43,16 @@
         </div>
 
         <div class="tc-summary tc-summary-minimal">
-            <div class="tc-summary-item income">
-                <span class="tc-summary-label">@Text["travel.summary.income"]</span>
-                <span class="tc-summary-amount">@FormatAmount(_collection.TotalIncome)</span>
-            </div>
             <div class="tc-summary-item expenses">
                 <span class="tc-summary-label">@Text["travel.summary.expenses"]</span>
                 <span class="tc-summary-amount">@FormatAmount(_collection.TotalExpenses)</span>
-            </div>
-            <div class="tc-summary-item balance @(_collection.Balance >= 0 ? "positive" : "negative")">
-                <span class="tc-summary-label">@Text["travel.summary.balance"]</span>
-                <span class="tc-summary-amount">@FormatAmount(_collection.Balance)</span>
             </div>
         </div>
     </section>
 
     <section class="tc-add-card tc-add-card-minimal">
-        <div class="tc-section-header-compact">
-            <div>
-                <h3 class="tc-section-title tc-section-title-plain">@Text["travel.composer.title"]</h3>
-                <p>@Text["travel.composer.subtitle"]</p>
-            </div>
-        </div>
 
         <div class="tc-form tc-form-compact">
-            <div class="tc-type-toggle tc-type-toggle-pill">
-                <button class="tc-type-btn @(_newEntry.Type == EntryType.Expense ? "active expense" : "")"
-                        @onclick='() => _newEntry.Type = EntryType.Expense'>
-                    @Text["travel.type.expense"]
-                </button>
-                <button class="tc-type-btn @(_newEntry.Type == EntryType.Income ? "active income" : "")"
-                        @onclick='() => _newEntry.Type = EntryType.Income'>
-                    @Text["travel.type.income"]
-                </button>
-            </div>
 
             <div class="tc-form-grid-minimal">
                 <label class="tc-field-block">
@@ -118,10 +94,10 @@
                 </label>
             </div>
 
-            <button class="tc-btn-add @(_newEntry.Type == EntryType.Income ? "income" : "expense")"
+            <button class="tc-btn-add @("expense")"
                     @onclick="AddEntry"
                     disabled="@(!CanAdd)">
-                @Text.Format("travel.addButton", _newEntry.Type == EntryType.Income ? Text["travel.type.income"] : Text["travel.type.expense"])
+                @Text.Format("travel.addButton", Text["travel.type.expense"])
             </button>
         </div>
     </section>
@@ -134,17 +110,12 @@
                     <h3 class="tc-section-title tc-section-title-plain">@Text["travel.list.title"]</h3>
                     <p>@_collection.Entries.Count @Text["travel.hero.entries"]</p>
                 </div>
-                <div class="tc-filter-row">
-                    <button class="tc-filter-btn @(_filter == null ? "active" : "")" @onclick='() => _filter = null'>@Text["travel.filter.all"]</button>
-                    <button class="tc-filter-btn income @(_filter == EntryType.Income ? "active" : "")" @onclick='() => _filter = EntryType.Income'>@Text["travel.filter.income"]</button>
-                    <button class="tc-filter-btn expense @(_filter == EntryType.Expense ? "active" : "")" @onclick='() => _filter = EntryType.Expense'>@Text["travel.filter.expenses"]</button>
-                </div>
             </div>
 
             <div class="tc-entries-list tc-entries-list-dense">
                 @foreach (var entry in FilteredEntries)
                 {
-                    <div class="tc-entry @(entry.Type == EntryType.Income ? "income" : "expense") tc-entry-dense">
+                    <div class="tc-entry @("expense") tc-entry-dense">
                         <div class="tc-entry-type-bar"></div>
                         <div class="tc-entry-body">
                             <div class="tc-entry-top">
@@ -158,8 +129,8 @@
                                         <span class="tc-entry-date">@entry.Date.ToString("d", Text.CurrentCulture)</span>
                                     </div>
                                 </div>
-                                <span class="tc-entry-amount @(entry.Type == EntryType.Income ? "income" : "expense")">
-                                    @(entry.Type == EntryType.Income ? "+" : "-")@FormatAmount(entry.Amount, includeSignSymbol: false)
+                                <span class="tc-entry-amount @("expense")">
+                                    @("-")@FormatAmount(entry.Amount, includeSignSymbol: false)
                                 </span>
                             </div>
                             <div class="tc-entry-bottom tc-entry-bottom-dense">

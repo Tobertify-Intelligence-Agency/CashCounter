@@ -9,13 +9,8 @@
 
 <div class="account-funds account-funds-minimal">
     <section class="af-hero-strip">
-        <div>
-            <p class="af-eyebrow">@Text["funds.eyebrow"]</p>
-            <div class="af-hero-balance @( _ledger.TotalBalance >= 0 ? "positive" : "negative")">@FormatAmount(_ledger.TotalBalance)</div>
-            <div class="af-hero-meta">
-                <span>@Text.Format("funds.accountsCount", _ledger.Accounts.Count)</span>
-                <span>@Text.Format("funds.net", FormatSignedAmount(_ledger.NetFlow))</span>
-            </div>
+        <div>            
+            
         </div>
     </section>
 
@@ -38,10 +33,8 @@
             <summary class="af-collapsible-summary">
                 <div class="af-section-heading-row af-collapsible-heading">
                     <div>
-                        <h3>@Text["funds.accounts.title"]</h3>
-                        <p>@Text["funds.accounts.body"]</p>
-                    </div>
-                    <span class="count-badge">@Text.Format("funds.defaultCurrency", _ledger.CurrencySymbol)</span>
+                        <h3>@Text["funds.accounts.title"]    |   @FormatAmount(_ledger.TotalBalance)</h3>
+                    </div>                   
                 </div>
             </summary>
 
@@ -71,10 +64,8 @@
             <summary class="af-collapsible-summary">
                 <div class="af-section-heading-row af-section-heading-row-tight af-collapsible-heading">
                     <div>
-                        <h3>@Text["funds.flow.title"]</h3>
-                        <p>@Text["funds.flow.body"]</p>
-                    </div>
-                    <div class="af-flow-badge @( _ledger.NetFlow >= 0 ? "positive" : "negative")">@FormatSignedAmount(_ledger.NetFlow)</div>
+                        <h3>@Text["funds.flow.title"]   |   @FormatAmount(_ledger.NetFlow)</h3>
+                    </div>                
                 </div>
             </summary>
 
@@ -97,16 +88,7 @@
                     <small>@Text.Format("funds.flow.expenseEntries", _ledger.Transactions.Count(t => t.Direction == CashFlowDirection.Outgoing))</small>
                 </div>
 
-                <div class="af-visual-card balance">
-                    <span class="af-summary-label">@Text["funds.balance"]</span>
-                    <strong class="@(_ledger.TotalBalance >= 0 ? "positive" : "negative")">@FormatAmount(_ledger.TotalBalance)</strong>
-                    <div class="af-balance-split af-balance-split-single">
-                        <div>
-                            <span class="af-summary-label">@Text["funds.activity"]</span>
-                            <strong class="@(_ledger.NetFlow >= 0 ? "positive" : "negative")">@FormatSignedAmount(_ledger.NetFlow)</strong>
-                        </div>
-                    </div>
-                </div>
+               
             </div>
         </details>
     }
@@ -116,8 +98,7 @@
             <summary class="af-collapsible-summary">
                 <div class="af-panel-header af-panel-header-minimal af-collapsible-heading">
                     <div>
-                        <h3>@Text["funds.categoryOverview.title"]</h3>
-                        <p>@Text["funds.categoryOverview.body"]</p>
+                        <h3>@Text["funds.categoryOverview.title"]</h3>                   
                     </div>
                 </div>
             </summary>
@@ -171,8 +152,7 @@
             <summary class="af-collapsible-summary">
                 <div class="af-panel-header af-panel-header-minimal af-collapsible-heading">
                     <div>
-                        <h3>@Text["funds.recent.title"]</h3>
-                        <p>@Text["funds.recent.body"]</p>
+                        <h3>@Text["funds.recent.title"]</h3>                   
                     </div>
                     <span class="count-badge">@Text.Format("funds.recent.total", _ledger.Transactions.Count)</span>
                 </div>
@@ -611,13 +591,13 @@
     private string FormatAmount(decimal amount, bool includeCurrency = true)
     {
         var number = amount.ToString("N2", Text.CurrentCulture);
-        return includeCurrency ? $"{_ledger.CurrencySymbol} {number}" : number;
+        return includeCurrency ? $" {number} {_ledger.CurrencySymbol}" : number;
     }
 
     private string FormatSignedAmount(decimal amount)
     {
         var prefix = amount >= 0 ? "+" : "-";
-        return $"{prefix}{_ledger.CurrencySymbol} {Math.Abs(amount).ToString("N2", Text.CurrentCulture)}";
+        return $"{prefix} {Math.Abs(amount).ToString("N2", Text.CurrentCulture)} {_ledger.CurrencySymbol}";
     }
 
     private string FormatPercent(decimal value)
