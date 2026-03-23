@@ -331,7 +331,6 @@
     private void ClearAll()
     {
         _collection.Entries.Clear();
-        _filter = null;
     }
 
     private void OnCurrencyChanged(ChangeEventArgs e)
@@ -363,5 +362,8 @@
     public void Dispose()
     {
         Text.Changed -= OnTextChanged;
+    }
+}
+ext.Changed -= OnTextChanged;
     }
 }
