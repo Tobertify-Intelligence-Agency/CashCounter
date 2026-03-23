@@ -3320,16 +3320,9 @@
 
 .cc-denomination-top {
     display: flex;
-    justify-content: flex-end;
-}
-
-.cc-denomination-meta {
-    display: inline-flex;
     align-items: flex-start;
-    justify-content: flex-end;
+    justify-content: space-between;
     gap: 0.35rem;
-    margin-left: auto;
-    text-align: right;
 }
 
 .cc-denomination-top .denom-name,
@@ -3341,12 +3334,14 @@
     font-size: 0.88rem;
     line-height: 1.1;
     margin-bottom: 0;
+    text-align: left;
 }
 
 .cc-denomination-top .denom-subtotal {
     font-size: 0.74rem;
     line-height: 1.15;
     text-align: right;
+    margin-left: auto;
 }
 
 .cc-quantity-controls {

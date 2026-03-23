@@ -210,7 +210,7 @@ public sealed class AppTextService : IAppTextService
         ["de"] = new(StringComparer.OrdinalIgnoreCase)
         {
             ["app.tools"] = "Tools",
-            ["app.version"] = "v1.0.8",
+            ["app.version"] = "v1.0.9",
             ["app.language"] = "Sprache",
             ["app.languageShort"] = "Sprache",
             ["app.currency"] = "Währung",
