@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using CashCount.Shared.Services;
 using CashCount.Shared.Services.Auth;
 using CashCount.Shared.Services.Billing;
+using CashCount.Shared.Services.Localization;
 using CashCount.Maui.Services.Auth;
 using CashCount.Maui.Services.Billing;
 #if ANDROID || IOS
