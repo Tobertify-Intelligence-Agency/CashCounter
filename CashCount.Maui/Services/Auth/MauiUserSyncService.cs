@@ -191,6 +191,21 @@ public class MauiUserSyncService : IUserSyncService
             TotalAmount = (double)count.TotalAmount,
             BanknotesTotal = (double)count.BanknotesTotal,
             CoinsTotal = (double)count.CoinsTotal,
+            Signature = new SavedCountSignatureDto
+            {
+                SignerName = count.Signature.SignerName,
+                TypedSignature = count.Signature.TypedSignature,
+                Mode = (int)count.Signature.Mode,
+                SignedAt = count.Signature.SignedAt?.ToString("o"),
+                DrawnStrokes = count.Signature.DrawnStrokes.Select(stroke => new SignatureStrokeDto
+                {
+                    Points = stroke.Points.Select(point => new SignaturePointDto
+                    {
+                        X = point.X,
+                        Y = point.Y
+                    }).ToList()
+                }).ToList()
+            },
             Denominations = count.Denominations.Select(d => new DenominationCountDto
             {
                 Value = (double)d.Value,
@@ -213,6 +228,25 @@ public class MauiUserSyncService : IUserSyncService
             TotalAmount = (decimal)dto.TotalAmount,
             BanknotesTotal = (decimal)dto.BanknotesTotal,
             CoinsTotal = (decimal)dto.CoinsTotal,
+            Signature = dto.Signature == null
+                ? new SavedCountSignature()
+                : new SavedCountSignature
+                {
+                    SignerName = dto.Signature.SignerName ?? string.Empty,
+                    TypedSignature = dto.Signature.TypedSignature ?? string.Empty,
+                    Mode = Enum.IsDefined(typeof(SignatureMode), dto.Signature.Mode) ? (SignatureMode)dto.Signature.Mode : SignatureMode.Drawn,
+                    SignedAt = string.IsNullOrWhiteSpace(dto.Signature.SignedAt)
+                        ? null
+                        : DateTime.TryParse(dto.Signature.SignedAt, out var signedAt) ? signedAt : null,
+                    DrawnStrokes = dto.Signature.DrawnStrokes?.Select(stroke => new SignatureStroke
+                    {
+                        Points = stroke.Points?.Select(point => new SignaturePoint
+                        {
+                            X = point.X,
+                            Y = point.Y
+                        }).ToList() ?? new List<SignaturePoint>()
+                    }).ToList() ?? new List<SignatureStroke>()
+                },
             Denominations = dto.Denominations?.Select(d => new DenominationCount
             {
                 Value = (decimal)d.Value,
@@ -248,7 +282,28 @@ public class MauiUserSyncService : IUserSyncService
         public double TotalAmount { get; set; }
         public double BanknotesTotal { get; set; }
         public double CoinsTotal { get; set; }
+        public SavedCountSignatureDto? Signature { get; set; }
         public List<DenominationCountDto>? Denominations { get; set; }
+    }
+
+    private class SavedCountSignatureDto
+    {
+        public string? SignerName { get; set; }
+        public string? TypedSignature { get; set; }
+        public int Mode { get; set; }
+        public string? SignedAt { get; set; }
+        public List<SignatureStrokeDto>? DrawnStrokes { get; set; }
+    }
+
+    private class SignatureStrokeDto
+    {
+        public List<SignaturePointDto>? Points { get; set; }
+    }
+
+    private class SignaturePointDto
+    {
+        public double X { get; set; }
+        public double Y { get; set; }
     }
 
     private class DenominationCountDto

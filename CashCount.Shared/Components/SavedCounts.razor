@@ -1,8 +1,11 @@
+@using System.Text.Json
 @using CashCount.Shared.Models
 @using CashCount.Shared.Services
 @inject IStorageService StorageService
 @inject IPremiumService PremiumService
 @inject NavigationManager NavigationManager
+@inject SavedCountExportService SavedCountExportService
+@inject IJSRuntime JSRuntime
 
 <div class="saved-counts">
     @if (!_isPremium)
@@ -49,11 +52,20 @@
         <div class="saved-counts-list">
             @foreach (var saved in _savedCounts)
             {
+                var isSigning = _editingCountId == saved.Id;
+
                 <div class="saved-count-card">
                     <div class="saved-count-header">
-                        <h3>@saved.Name</h3>
-                        <span class="saved-date">@saved.SavedAt.ToString("dd.MM.yyyy HH:mm")</span>
+                        <div>
+                            <h3>@saved.Name</h3>
+                            <span class="saved-date">@saved.SavedAt.ToString("dd.MM.yyyy HH:mm")</span>
+                        </div>
+                        @if (saved.Signature?.HasAnySignature == true)
+                        {
+                            <span class="saved-signature-badge">Signed</span>
+                        }
                     </div>
+
                     <div class="saved-count-amount">
                         <span class="currency-symbol">@saved.CurrencySymbol</span>
                         <span class="total-value">@saved.TotalAmount.ToString("N2")</span>
@@ -84,10 +96,84 @@
                         </details>
                     }
 
-                    <div class="saved-count-actions">
+                    @if (saved.Signature?.HasAnySignature == true)
+                    {
+                        <div class="saved-signature-summary">
+                            <div>
+                                <strong>@(string.IsNullOrWhiteSpace(saved.Signature.SignerName) ? "Signed count" : saved.Signature.SignerName)</strong>
+                                <span>
+                                    @if (saved.Signature.SignedAt.HasValue)
+                                    {
+                                        @saved.Signature.SignedAt.Value.ToString("dd.MM.yyyy HH:mm")
+                                    }
+                                    else
+                                    {
+                                        @:Signature saved
+                                    }
+                                </span>
+                            </div>
+                            <span class="saved-signature-type">@(saved.Signature.HasDrawnSignature ? "Drawn" : "Typed")</span>
+                        </div>
+                    }
+
+                    <div class="saved-count-actions saved-count-actions-primary">
                         <button class="btn-load" @onclick="() => LoadCount(saved)">Load</button>
+                        <button class="btn-secondary-action" @onclick="() => ToggleSignatureEditor(saved)">@(isSigning ? "Close Sign" : "Sign")</button>
+                        <button class="btn-secondary-action" @onclick="() => ExportPdfAsync(saved)">Export PDF</button>
+                    </div>
+                    <div class="saved-count-actions saved-count-actions-secondary">
                         <button class="btn-delete-single" @onclick="() => DeleteCount(saved.Id)">Delete</button>
                     </div>
+
+                    @if (isSigning)
+                    {
+                        <div class="saved-signature-editor">
+                            <div class="saved-signature-editor-header">
+                                <div>
+                                    <h4>Signature</h4>
+                                    <p>Add a signature before exporting this count as PDF.</p>
+                                </div>
+                                @if (_signatureSaveState == SignatureSaveState.Saved)
+                                {
+                                    <span class="saved-signature-feedback success">Signature saved</span>
+                                }
+                                else if (_signatureSaveState == SignatureSaveState.Error)
+                                {
+                                    <span class="saved-signature-feedback error">Please add a name and a signature.</span>
+                                }
+                            </div>
+
+                            <div class="saved-signature-mode-toggle">
+                                <button class="saved-signature-mode-btn @(_signatureMode == SignatureMode.Drawn ? "active" : null)" @onclick="() => SetSignatureMode(SignatureMode.Drawn)">Draw</button>
+                                <button class="saved-signature-mode-btn @(_signatureMode == SignatureMode.Typed ? "active" : null)" @onclick="() => SetSignatureMode(SignatureMode.Typed)">Type</button>
+                            </div>
+
+                            <div class="saved-signature-form-grid">
+                                <div class="saved-signature-field">
+                                    <label for="signature-name">Signer name</label>
+                                    <input id="signature-name" class="saved-signature-input" @bind="_signerName" @bind:event="oninput" placeholder="Who signed this count?" />
+                                </div>
+                                <div class="saved-signature-field">
+                                    <label for="signature-typed">Typed signature</label>
+                                    <input id="signature-typed" class="saved-signature-input @(_signatureMode == SignatureMode.Typed ? "signature-font" : null)" @bind="_typedSignature" @bind:event="oninput" placeholder="Type signature text" disabled="@(_signatureMode != SignatureMode.Typed)" />
+                                </div>
+                            </div>
+
+                            <div class="saved-signature-canvas-wrap @(_signatureMode == SignatureMode.Drawn ? null : "disabled")">
+                                <div class="saved-signature-canvas-header">
+                                    <span>Draw signature</span>
+                                    <button class="btn-link-action" @onclick="ClearDrawnSignatureAsync" disabled="@(_signatureMode != SignatureMode.Drawn)">Clear</button>
+                                </div>
+                                <canvas id="@_signatureCanvasId" class="saved-signature-canvas"></canvas>
+                            </div>
+
+                            <div class="saved-signature-editor-actions">
+                                <button class="btn-cancel" @onclick="CloseSignatureEditor">Cancel</button>
+                                <button class="btn-secondary-action" @onclick="() => RemoveSignatureAsync(saved)" disabled="@(!(saved.Signature?.HasAnySignature ?? false) && !HasWorkingSignature())">Remove Signature</button>
+                                <button class="btn-load" @onclick="() => SaveSignatureAsync(saved)">Save Signature</button>
+                            </div>
+                        </div>
+                    }
                 </div>
             }
         </div>
@@ -95,10 +181,20 @@
 </div>
 
 @code {
+    private readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
+    private readonly string _signatureCanvasId = "saved-count-signature-pad";
+
     private List<SavedCount> _savedCounts = new();
     private bool _isLoading = true;
     private bool _showConfirmClear = false;
     private bool _isPremium = false;
+
+    private string? _editingCountId;
+    private string _signerName = string.Empty;
+    private string _typedSignature = string.Empty;
+    private List<SignatureStroke> _drawnStrokes = new();
+    private SignatureMode _signatureMode = SignatureMode.Drawn;
+    private SignatureSaveState _signatureSaveState = SignatureSaveState.None;
 
     protected override async Task OnInitializedAsync()
     {
@@ -107,6 +203,16 @@
             await LoadSavedCounts();
         else
             _isLoading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!string.IsNullOrWhiteSpace(_editingCountId))
+        {
+            await JSRuntime.InvokeVoidAsync("cashCountSignature.init", _signatureCanvasId, JsonSerializer.Serialize(_drawnStrokes, _jsonOptions));
+        }
+
+        await base.OnAfterRenderAsync(firstRender);
     }
 
     private async Task LoadSavedCounts()
@@ -119,13 +225,16 @@
 
     private void LoadCount(SavedCount saved)
     {
-        // Navigate to home and pass the saved count ID as a query parameter
         NavigationManager.NavigateTo($"/?load={saved.Id}");
     }
 
     private async Task DeleteCount(string id)
     {
         await StorageService.DeleteCountAsync(id);
+        if (_editingCountId == id)
+        {
+            CloseSignatureEditor();
+        }
         await LoadSavedCounts();
     }
 
@@ -138,6 +247,141 @@
     {
         await StorageService.ClearAllAsync();
         _showConfirmClear = false;
+        CloseSignatureEditor();
         await LoadSavedCounts();
+    }
+
+    private void ToggleSignatureEditor(SavedCount saved)
+    {
+        if (_editingCountId == saved.Id)
+        {
+            CloseSignatureEditor();
+            return;
+        }
+
+        _editingCountId = saved.Id;
+        _signerName = saved.Signature?.SignerName ?? string.Empty;
+        _typedSignature = saved.Signature?.TypedSignature ?? string.Empty;
+        _drawnStrokes = saved.Signature?.DrawnStrokes?.Select(CloneStroke).ToList() ?? new List<SignatureStroke>();
+        _signatureMode = saved.Signature?.HasDrawnSignature == true ? SignatureMode.Drawn : saved.Signature?.Mode ?? SignatureMode.Drawn;
+        _signatureSaveState = SignatureSaveState.None;
+    }
+
+    private void CloseSignatureEditor()
+    {
+        _editingCountId = null;
+        _signerName = string.Empty;
+        _typedSignature = string.Empty;
+        _drawnStrokes = new List<SignatureStroke>();
+        _signatureMode = SignatureMode.Drawn;
+        _signatureSaveState = SignatureSaveState.None;
+    }
+
+    private void SetSignatureMode(SignatureMode mode)
+    {
+        _signatureMode = mode;
+        _signatureSaveState = SignatureSaveState.None;
+    }
+
+    private async Task SaveSignatureAsync(SavedCount saved)
+    {
+        _signatureSaveState = SignatureSaveState.None;
+        if (_signatureMode == SignatureMode.Drawn)
+        {
+            _drawnStrokes = await GetCurrentDrawnSignatureAsync();
+        }
+
+        var hasTyped = !string.IsNullOrWhiteSpace(_typedSignature);
+        var hasDrawn = _drawnStrokes.Any(stroke => stroke.Points.Count > 0);
+        if (string.IsNullOrWhiteSpace(_signerName) || (!hasTyped && !hasDrawn))
+        {
+            _signatureSaveState = SignatureSaveState.Error;
+            return;
+        }
+
+        saved.Signature = new SavedCountSignature
+        {
+            SignerName = _signerName.Trim(),
+            TypedSignature = _typedSignature.Trim(),
+            Mode = _signatureMode,
+            SignedAt = DateTime.Now,
+            DrawnStrokes = _drawnStrokes.Select(CloneStroke).ToList()
+        };
+
+        await StorageService.SaveCountAsync(saved);
+        _signatureSaveState = SignatureSaveState.Saved;
+        await LoadSavedCounts();
+    }
+
+    private async Task RemoveSignatureAsync(SavedCount saved)
+    {
+        saved.Signature = new SavedCountSignature();
+        await StorageService.SaveCountAsync(saved);
+        await JSRuntime.InvokeVoidAsync("cashCountSignature.clear", _signatureCanvasId);
+        ToggleSignatureEditor(saved);
+        await LoadSavedCounts();
+    }
+
+    private async Task ClearDrawnSignatureAsync()
+    {
+        _drawnStrokes.Clear();
+        _signatureSaveState = SignatureSaveState.None;
+        await JSRuntime.InvokeVoidAsync("cashCountSignature.clear", _signatureCanvasId);
+    }
+
+    private async Task<List<SignatureStroke>> GetCurrentDrawnSignatureAsync()
+    {
+        var json = await JSRuntime.InvokeAsync<string>("cashCountSignature.getStrokes", _signatureCanvasId);
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return new List<SignatureStroke>();
+        }
+
+        return JsonSerializer.Deserialize<List<SignatureStroke>>(json, _jsonOptions) ?? new List<SignatureStroke>();
+    }
+
+    private async Task ExportPdfAsync(SavedCount saved)
+    {
+        if (_editingCountId == saved.Id)
+        {
+            if (_signatureMode == SignatureMode.Drawn)
+            {
+                _drawnStrokes = await GetCurrentDrawnSignatureAsync();
+            }
+
+            if (_drawnStrokes.Any(stroke => stroke.Points.Count > 0) || !string.IsNullOrWhiteSpace(_typedSignature) || !string.IsNullOrWhiteSpace(_signerName))
+            {
+                saved.Signature = new SavedCountSignature
+                {
+                    SignerName = _signerName.Trim(),
+                    TypedSignature = _typedSignature.Trim(),
+                    Mode = _signatureMode,
+                    SignedAt = saved.Signature?.SignedAt ?? DateTime.Now,
+                    DrawnStrokes = _drawnStrokes.Select(CloneStroke).ToList()
+                };
+                await StorageService.SaveCountAsync(saved);
+                await LoadSavedCounts();
+            }
+        }
+
+        await SavedCountExportService.ExportAsync(saved);
+    }
+
+    private bool HasWorkingSignature()
+        => !string.IsNullOrWhiteSpace(_signerName)
+           || !string.IsNullOrWhiteSpace(_typedSignature)
+           || _drawnStrokes.Any(stroke => stroke.Points.Count > 0);
+
+    private static SignatureStroke CloneStroke(SignatureStroke stroke)
+        => new()
+        {
+            Points = stroke.Points.Select(point => new SignaturePoint { X = point.X, Y = point.Y }).ToList()
+        };
+
+    private enum SignatureSaveState
+    {
+        None,
+        Saved,
+        Error
     }
 }

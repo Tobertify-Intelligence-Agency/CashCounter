@@ -6,6 +6,7 @@ using CashCount.Shared.Services.Billing;
 using CashCount.Shared.Services.Localization;
 using CashCount.Maui.Services.Auth;
 using CashCount.Maui.Services.Billing;
+using CashCount.Maui.Services;
 #if ANDROID || IOS
 using Plugin.Firebase.Auth;
 #endif
@@ -40,6 +41,9 @@ public static class MauiProgram
 
 		// Register other services
 		builder.Services.AddScoped<IStorageService, LocalStorageService>();
+		builder.Services.AddScoped<IFileExportService, MauiFileExportService>();
+		builder.Services.AddScoped<ISavedCountPdfService, SavedCountPdfService>();
+		builder.Services.AddScoped<SavedCountExportService>();
 		builder.Services.AddScoped<IPremiumService, PremiumService>();
 		builder.Services.AddScoped<IAppTextService, AppTextService>();
 

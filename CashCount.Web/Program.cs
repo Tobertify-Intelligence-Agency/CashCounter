@@ -7,6 +7,7 @@ using CashCount.Shared.Services.Auth;
 using CashCount.Shared.Services.Billing;
 using CashCount.Web.Services.Auth;
 using CashCount.Web.Services.Billing;
+using CashCount.Web.Services;
 using CashCount.Shared.Services.Localization;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
@@ -28,6 +29,9 @@ builder.Services.AddScoped<IBillingService, WebBillingService>();
 
 // Register other services
 builder.Services.AddScoped<IStorageService, LocalStorageService>();
+builder.Services.AddScoped<IFileExportService, WebFileExportService>();
+builder.Services.AddScoped<ISavedCountPdfService, SavedCountPdfService>();
+builder.Services.AddScoped<SavedCountExportService>();
 builder.Services.AddScoped<IPremiumService, PremiumService>();
 builder.Services.AddScoped<IAppTextService, AppTextService>();
 
