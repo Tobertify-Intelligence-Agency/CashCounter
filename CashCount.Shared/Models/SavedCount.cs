@@ -12,6 +12,7 @@ public class SavedCount
     public decimal CoinsTotal { get; set; }
     public List<DenominationCount> Denominations { get; set; } = new();
     public SavedCountSignature Signature { get; set; } = new();
+    public SavedCountSignature SecondSignature { get; set; } = new();
 }
 
 public class DenominationCount

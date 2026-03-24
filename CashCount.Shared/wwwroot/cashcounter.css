@@ -4275,6 +4275,20 @@
     background: #fef2f2;
 }
 
+.saved-signature-signer-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-secondary, #64748b);
+    margin-bottom: 0.25rem;
+}
+
+.saved-signature-signer-divider {
+    border-top: 1px dashed var(--border-color, #e2e8f0);
+    margin: 0.75rem 0;
+}
+
 .saved-signature-mode-toggle {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

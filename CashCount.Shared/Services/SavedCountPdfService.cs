@@ -10,149 +10,193 @@ public class SavedCountPdfService : ISavedCountPdfService
     {
         ArgumentNullException.ThrowIfNull(savedCount);
 
+        const float pageHeight = 842f;
         const float left = 48f;
         const float right = 547f;
-        const float top = 792f;
         const float bottom = 52f;
         const float contentWidth = right - left;
+
+        // Currency symbol may contain characters outside Latin-1 (e.g. € = U+20AC).
+        // Fall back to the currency code so no '?' appears in the output.
+        var rawSymbol = Sanitize(savedCount.CurrencySymbol);
+        var safeSymbol = rawSymbol.Contains('?') ? savedCount.CurrencyCode : rawSymbol;
+        string Money(decimal amount) => $"{safeSymbol} {amount.ToString("N2", CultureInfo.InvariantCulture)}";
 
         var pages = new List<StringBuilder>();
         var page = new StringBuilder();
         pages.Add(page);
+        var y = pageHeight - 48f;
 
-        var y = top;
-
-        void EnsureSpace(float heightNeeded)
+        void WriteTextAt(string text, float x, float ty, float fontSize, bool bold = false)
         {
-            if (y - heightNeeded < bottom)
-            {
-                page = new StringBuilder();
-                pages.Add(page);
-                y = top;
-            }
-        }
-
-        void WriteText(string text, float x, float fontSize, bool bold = false)
-        {
-            if (string.IsNullOrWhiteSpace(text))
-            {
-                return;
-            }
-
+            if (string.IsNullOrWhiteSpace(text)) return;
             page.AppendLine("BT");
             page.AppendLine($"/{(bold ? "F2" : "F1")} {Fmt(fontSize)} Tf");
-            page.AppendLine($"1 0 0 1 {Fmt(x)} {Fmt(y)} Tm");
+            page.AppendLine($"1 0 0 1 {Fmt(x)} {Fmt(ty)} Tm");
             page.AppendLine($"({EscapePdfText(Sanitize(text))}) Tj");
             page.AppendLine("ET");
         }
 
-        void DrawLine(float x1, float y1, float x2, float y2, float width = 1f)
+        void WriteText(string text, float x, float fontSize, bool bold = false)
+            => WriteTextAt(text, x, y, fontSize, bold);
+
+        void HRule(float lineY, float w = 0.5f)
         {
-            page.AppendLine($"{Fmt(width)} w");
-            page.AppendLine($"{Fmt(x1)} {Fmt(y1)} m");
-            page.AppendLine($"{Fmt(x2)} {Fmt(y2)} l S");
+            page.AppendLine($"{Fmt(w)} w");
+            page.AppendLine($"{Fmt(left)} {Fmt(lineY)} m");
+            page.AppendLine($"{Fmt(right)} {Fmt(lineY)} l S");
         }
 
-        void AddLine(string label, string value, float fontSize = 11f)
+        void VLine(float x, float y1, float y2, float w = 0.5f)
         {
-            EnsureSpace(18f);
-            WriteText(label, left, fontSize, true);
-            WriteText(value, left + 120f, fontSize);
-            y -= 18f;
+            page.AppendLine($"{Fmt(w)} w");
+            page.AppendLine($"{Fmt(x)} {Fmt(y1)} m");
+            page.AppendLine($"{Fmt(x)} {Fmt(y2)} l S");
         }
 
-        EnsureSpace(30f);
-        WriteText(savedCount.Name, left, 22f, true);
-        y -= 28f;
-        WriteText("Saved cash count export", left, 11f);
-        y -= 22f;
-        DrawLine(left, y, right, y, 1f);
-        y -= 20f;
+        void EnsureSpace(float h)
+        {
+            if (y - h >= bottom) return;
+            page = new StringBuilder();
+            pages.Add(page);
+            y = pageHeight - 48f;
+        }
 
-        AddLine("Saved on", savedCount.SavedAt.ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture));
-        AddLine("Currency", $"{savedCount.CurrencySymbol} {savedCount.CurrencyCode}".Trim());
-        AddLine("Banknotes", FormatMoney(savedCount.CurrencySymbol, savedCount.BanknotesTotal));
-        AddLine("Coins", FormatMoney(savedCount.CurrencySymbol, savedCount.CoinsTotal));
-        AddLine("Total", FormatMoney(savedCount.CurrencySymbol, savedCount.TotalAmount), 12f);
-
+        // ── 1. HEADER ────────────────────────────────────────────────────────
+        WriteText(savedCount.Name, left, 20f, true);
+        WriteTextAt(savedCount.SavedAt.ToString("dd.MM.yyyy  HH:mm", CultureInfo.InvariantCulture), right - 110f, y, 10f);
         y -= 10f;
-        EnsureSpace(22f);
-        WriteText("Denomination breakdown", left, 14f, true);
-        y -= 20f;
+        HRule(y, 1f);
+        y -= 18f;
 
-        var orderedDenominations = savedCount.Denominations
+        // ── 2. TOTAL ─────────────────────────────────────────────────────────
+        EnsureSpace(28f);
+        WriteText("Total", left, 9f, true);
+        WriteText(Money(savedCount.TotalAmount), left + 60f, 16f, true);
+        y -= 22f;
+
+        // ── 3. META ──────────────────────────────────────────────────────────
+        EnsureSpace(18f);
+        WriteText($"Currency: {savedCount.CurrencyCode}", left, 9f);
+        WriteTextAt($"Saved: {savedCount.SavedAt.ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture)}", left + 160f, y, 9f);
+        y -= 16f;
+        HRule(y);
+        y -= 14f;
+
+        // row padding constants — rowTop must exceed the font cap-height (~8pt for 10pt)
+        // so rules never cut through letter tops; rowBot clears descenders (~2pt)
+        const float rowTop = 11f;
+        const float rowBot = 5f;
+
+        // ── 4. TABLE HEADER ───────────────────────────────────────────────────
+        EnsureSpace(rowTop + rowBot + 2f);
+        y -= rowTop;
+        WriteText("Denomination", left, 9f, true);
+        WriteTextAt("Qty", left + 290f, y, 9f, true);
+        WriteTextAt("Amount", right - 80f, y, 9f, true);
+        y -= rowBot;
+        HRule(y, 0.75f);
+
+        // ── 5. DENOMINATION ROWS ──────────────────────────────────────────────
+        var allDenoms = savedCount.Denominations
             .OrderBy(d => d.IsCoin)
             .ThenByDescending(d => d.Value)
             .ToList();
 
-        if (orderedDenominations.Count == 0)
+        if (allDenoms.Count == 0)
         {
-            EnsureSpace(16f);
-            WriteText("No denominations were stored for this count.", left, 11f);
-            y -= 16f;
+            EnsureSpace(rowTop + rowBot);
+            y -= rowTop;
+            WriteText("No denominations recorded.", left, 10f);
+            y -= rowBot;
+            HRule(y, 0.3f);
         }
         else
         {
-            foreach (var denomination in orderedDenominations)
+            foreach (var denom in allDenoms)
             {
-                EnsureSpace(18f);
-                WriteText($"{denomination.Quantity} × {denomination.DisplayName}", left, 11f);
-                WriteText(FormatMoney(savedCount.CurrencySymbol, denomination.Value * denomination.Quantity), left + 260f, 11f);
-                y -= 18f;
+                EnsureSpace(rowTop + rowBot);
+                y -= rowTop;
+                WriteText(denom.DisplayName, left, 10f);
+                WriteTextAt($"x {denom.Quantity}", left + 290f, y, 10f);
+                WriteTextAt(Money(denom.Value * denom.Quantity), right - 80f, y, 10f);
+                y -= rowBot;
+                HRule(y, 0.3f);
             }
         }
 
-        if (savedCount.Signature?.HasAnySignature == true)
+        // ── 6. TOTAL ROW ──────────────────────────────────────────────────────
+        EnsureSpace(rowTop + rowBot + 4f);
+        y -= rowTop;
+        WriteText("Total", left, 10f, true);
+        WriteTextAt(Money(savedCount.TotalAmount), right - 80f, y, 11f, true);
+        y -= rowBot;
+        HRule(y, 1f);
+        y -= 18f;
+
+        // ── 7. SIGNATURES ─────────────────────────────────────────────────────
+        EnsureSpace(16f);
+        WriteText("Signatures", left, 10f, true);
+        y -= 6f;
+        HRule(y, 0.75f);
+        y -= 8f;
+
+        void RenderSignatureBox(SavedCountSignature sig, string fallbackLabel)
         {
-            var signature = savedCount.Signature;
-            y -= 12f;
-            EnsureSpace(170f);
-            WriteText("Signature", left, 14f, true);
-            y -= 16f;
+            const float boxH = 80f;
+            EnsureSpace(boxH + 4f);
+            var boxBottom = y - boxH;
 
-            var boxTop = y;
-            var boxHeight = 108f;
-            var boxBottom = boxTop - boxHeight;
-            page.AppendLine("0.75 w");
-            page.AppendLine($"{Fmt(left)} {Fmt(boxBottom)} {Fmt(contentWidth)} {Fmt(boxHeight)} re S");
+            page.AppendLine("0.5 w");
+            page.AppendLine($"{Fmt(left)} {Fmt(boxBottom)} {Fmt(contentWidth)} {Fmt(boxH)} re S");
 
-            var signer = string.IsNullOrWhiteSpace(signature.SignerName) ? "Signer" : signature.SignerName.Trim();
-            var signedLabel = signature.SignedAt.HasValue
-                ? $"Signed on {signature.SignedAt.Value.ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture)}"
-                : "Signed";
-
-            y = boxTop - 20f;
-            WriteText($"Signer: {signer}", left + 12f, 11f, true);
-            y -= 16f;
-            WriteText(signedLabel, left + 12f, 10f);
-
-            var signatureAreaLeft = left + 12f;
-            var signatureAreaBottom = boxBottom + 18f;
-            var signatureAreaWidth = contentWidth - 24f;
-            var signatureAreaHeight = 42f;
-
-            DrawLine(signatureAreaLeft, signatureAreaBottom, signatureAreaLeft + signatureAreaWidth, signatureAreaBottom, 0.8f);
-
-            if (signature.HasDrawnSignature)
+            if (sig.HasAnySignature)
             {
-                RenderDrawnSignature(page, signature.DrawnStrokes, signatureAreaLeft, signatureAreaBottom + 4f, signatureAreaWidth, signatureAreaHeight - 8f);
+                var signer = string.IsNullOrWhiteSpace(sig.SignerName) ? "Signer" : sig.SignerName.Trim();
+                var signedOn = sig.SignedAt.HasValue
+                    ? $"Signed on {sig.SignedAt.Value.ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture)}"
+                    : "Signed";
+                WriteTextAt(signer, left + 10f, boxBottom + boxH - 18f, 11f, true);
+                WriteTextAt(signedOn, left + 10f, boxBottom + boxH - 31f, 9f);
             }
-            else if (signature.HasTypedSignature)
+            else
             {
-                y = signatureAreaBottom + 12f;
-                WriteText(signature.TypedSignature, signatureAreaLeft + 4f, 18f);
+                WriteTextAt(fallbackLabel, left + 10f, boxBottom + boxH - 18f, 9f);
             }
 
-            y = boxBottom - 24f;
+            var divX = left + contentWidth * 0.42f;
+            VLine(divX, boxBottom + 8f, boxBottom + boxH - 8f, 0.4f);
+
+            var sigLeft = divX + 10f;
+            var sigWidth = right - sigLeft - 10f;
+            var sigBaseline = boxBottom + 14f;
+
+            page.AppendLine("0.4 w");
+            page.AppendLine($"{Fmt(sigLeft)} {Fmt(sigBaseline)} m");
+            page.AppendLine($"{Fmt(right - 10f)} {Fmt(sigBaseline)} l S");
+
+            if (sig.HasDrawnSignature)
+                RenderDrawnSignature(page, sig.DrawnStrokes, sigLeft, sigBaseline + 2f, sigWidth, boxH - 24f);
+            else if (sig.HasTypedSignature)
+                WriteTextAt(sig.TypedSignature, sigLeft + 4f, sigBaseline + 14f, 16f);
+
+            y = boxBottom - 10f;
         }
-        else
+
+        RenderSignatureBox(savedCount.Signature ?? new SavedCountSignature(), "Signer 1 — not signed");
+        RenderSignatureBox(savedCount.SecondSignature ?? new SavedCountSignature(), "Signer 2 — not signed");
+
+        // ── 8. FOOTER on every page ───────────────────────────────────────────
+        var footerTs = DateTime.Now.ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture);
+        foreach (var pg in pages)
         {
-            y -= 18f;
-            EnsureSpace(36f);
-            WriteText("Signature", left, 14f, true);
-            y -= 14f;
-            DrawLine(left, y, left + 220f, y, 0.8f);
-            y -= 18f;
+            pg.AppendLine("0.6 0.6 0.6 RG");
+            pg.AppendLine($"0.4 w {Fmt(left)} 34 m {Fmt(right)} 34 l S");
+            pg.AppendLine("0 0 0 RG");
+            pg.AppendLine("0.5 0.5 0.5 rg");
+            pg.AppendLine($"BT /F1 7.5 Tf 1 0 0 1 {Fmt(left)} 22 Tm (Generated by CashCount) Tj ET");
+            pg.AppendLine($"BT /F1 7.5 Tf 1 0 0 1 {Fmt(right - 80f)} 22 Tm ({EscapePdfText(Sanitize(footerTs))}) Tj ET");
+            pg.AppendLine("0 0 0 rg");
         }
 
         return SimplePdfDocument.Create(pages);
@@ -187,7 +231,16 @@ public class SavedCountPdfService : ISavedCountPdfService
             : $"{symbol} {amount.ToString("N2", CultureInfo.InvariantCulture)}";
 
     private static string Sanitize(string value)
-        => new(value.Select(ch => ch <= 255 ? ch : '?').ToArray());
+    {
+        var sb = new StringBuilder(value.Length + 8);
+        foreach (var ch in value)
+        {
+            if (ch == '\u20AC') sb.Append("EUR");       // € not in Latin-1
+            else if (ch <= 255) sb.Append(ch);
+            else sb.Append('?');
+        }
+        return sb.ToString();
+    }
 
     private static string EscapePdfText(string text)
         => text.Replace("\\", "\\\\", StringComparison.Ordinal)
