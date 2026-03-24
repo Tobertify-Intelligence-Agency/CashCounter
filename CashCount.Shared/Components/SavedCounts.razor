@@ -342,7 +342,7 @@
             SignerName = _signerName.Trim(),
             TypedSignature = _typedSignature.Trim(),
             Mode = _signatureMode,
-            SignedAt = DateTime.Now,
+            SignedAt = DateTime.UtcNow,
             DrawnStrokes = _drawnStrokes.Select(CloneStroke).ToList()
         };
 
@@ -355,7 +355,7 @@
                 SignerName = _signerName2.Trim(),
                 TypedSignature = _typedSignature2.Trim(),
                 Mode = _signatureMode2,
-                SignedAt = DateTime.Now,
+                SignedAt = DateTime.UtcNow,
                 DrawnStrokes = _drawnStrokes2.Select(CloneStroke).ToList()
             };
         }
@@ -408,7 +408,7 @@
                     SignerName = _signerName.Trim(),
                     TypedSignature = _typedSignature.Trim(),
                     Mode = _signatureMode,
-                    SignedAt = saved.Signature?.SignedAt ?? DateTime.Now,
+                    SignedAt = saved.Signature?.SignedAt ?? DateTime.UtcNow,
                     DrawnStrokes = _drawnStrokes.Select(CloneStroke).ToList()
                 };
             }
@@ -420,7 +420,7 @@
                     SignerName = _signerName2.Trim(),
                     TypedSignature = _typedSignature2.Trim(),
                     Mode = _signatureMode2,
-                    SignedAt = saved.SecondSignature?.SignedAt ?? DateTime.Now,
+                    SignedAt = saved.SecondSignature?.SignedAt ?? DateTime.UtcNow,
                     DrawnStrokes = _drawnStrokes2.Select(CloneStroke).ToList()
                 };
             }

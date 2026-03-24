@@ -66,9 +66,9 @@
                                 <span class="denom-subtotal">@FormatAmount(note.Total)</span>
                             </div>
                             <div class="quantity-controls cc-quantity-controls">
-                                <button class="btn-minus" @onclick="() => Decrement(note)" disabled="@(note.Quantity <= 0)">-</button>
-                                <input type="number" min="0" @bind="note.Quantity" @bind:event="oninput" class="quantity-input" />
-                                <button class="btn-plus" @onclick="() => Increment(note)">+</button>
+                                <button class="btn-minus" @onclick="() => Decrement(note)" disabled="@(note.Quantity <= 0)" aria-label="@($"Decrease {note.DisplayName}")">-</button>
+                                <input type="number" min="0" max="9999" @bind="note.Quantity" @bind:event="oninput" class="quantity-input" aria-label="@($"Quantity for {note.DisplayName}")" />
+                                <button class="btn-plus" @onclick="() => Increment(note)" aria-label="@($"Increase {note.DisplayName}")">+</button>
                             </div>
                         </div>
                     }
@@ -91,9 +91,9 @@
                                 <span class="denom-subtotal">@FormatAmount(coin.Total)</span>
                             </div>
                             <div class="quantity-controls cc-quantity-controls">
-                                <button class="btn-minus" @onclick="() => Decrement(coin)" disabled="@(coin.Quantity <= 0)">-</button>
-                                <input type="number" min="0" @bind="coin.Quantity" @bind:event="oninput" class="quantity-input" />
-                                <button class="btn-plus" @onclick="() => Increment(coin)">+</button>
+                                <button class="btn-minus" @onclick="() => Decrement(coin)" disabled="@(coin.Quantity <= 0)" aria-label="@($"Decrease {coin.DisplayName}")">-</button>
+                                <input type="number" min="0" max="9999" @bind="coin.Quantity" @bind:event="oninput" class="quantity-input" aria-label="@($"Quantity for {coin.DisplayName}")" />
+                                <button class="btn-plus" @onclick="() => Increment(coin)" aria-label="@($"Increase {coin.DisplayName}")">+</button>
                             </div>
                         </div>
                     }
@@ -109,14 +109,15 @@
             <div class="cc-footer-actions">
                 @if (_canSaveCounts)
                 {
-                    <button class="cc-circle-btn cc-circle-btn-save @(_showSaveSuccess ? "cc-circle-success" : "")"
+                    <button class="cc-circle-btn cc-circle-btn-save @(_showSaveSuccess ? "cc-circle-success" : "") @(_showSaveError ? "cc-circle-error" : "")"
                             @onclick="SaveCurrentCount"
                             disabled="@(CalculateTotal() == 0)"
-                            title="@Text["cashCounter.save"]">
-                        @(_showSaveSuccess ? "✓" : "💾")
+                            title="@Text["cashCounter.save"]"
+                            aria-label="@Text["cashCounter.save"]">
+                        @(_showSaveSuccess ? "✓" : _showSaveError ? "✕" : "💾")
                     </button>
                 }
-                <button class="cc-circle-btn cc-circle-btn-clear" @onclick="ClearAll" title="@Text["cashCounter.clearAll"]">✕</button>
+                <button class="cc-circle-btn cc-circle-btn-clear" @onclick="ClearAll" title="@Text["cashCounter.clearAll"]" aria-label="@Text["cashCounter.clearAll"]">✕</button>
             </div>
         </footer>
     }
@@ -127,6 +128,7 @@
     private Currency? _selectedCurrency;
     private string _saveName = string.Empty;
     private bool _showSaveSuccess = false;
+    private bool _showSaveError = false;
     private bool _editingName = false;
 
     private bool _canSelectCurrency = false;
@@ -136,7 +138,8 @@
     protected override async Task OnInitializedAsync()
     {
         Text.Changed += OnTextChanged;
-        _selectedCurrency = _currencies.FirstOrDefault();
+        _selectedCurrency = _currencies.FirstOrDefault()
+            ?? throw new InvalidOperationException("No currencies available. Currency list must not be empty.");
 
         _canSelectCurrency = await PremiumService.IsFeatureEnabledAsync(PremiumFeature.CurrencySelection);
         _canSaveCounts = await PremiumService.IsFeatureEnabledAsync(PremiumFeature.SaveCounts);
@@ -191,7 +194,13 @@
     private decimal CalculateBanknotesTotal() => _selectedCurrency?.Banknotes.Sum(n => n.Total) ?? 0;
     private decimal CalculateCoinsTotal() => _selectedCurrency?.Coins.Sum(c => c.Total) ?? 0;
 
-    private void Increment(Denomination denom) => denom.Quantity++;
+    private const int MaxQuantity = 9999;
+
+    private void Increment(Denomination denom)
+    {
+        if (denom.Quantity < MaxQuantity)
+            denom.Quantity++;
+    }
 
     private void Decrement(Denomination denom)
     {
@@ -222,7 +231,7 @@
             Name = string.IsNullOrWhiteSpace(_saveName)
                 ? $"Count {DateTime.Now.ToString("g", Text.CurrentCulture)}"
                 : _saveName,
-            SavedAt = DateTime.Now,
+            SavedAt = DateTime.UtcNow,
             CurrencyCode = _selectedCurrency.Code,
             CurrencySymbol = _selectedCurrency.Symbol,
             TotalAmount = CalculateTotal(),
@@ -253,14 +262,22 @@
             });
         }
 
-        await StorageService.SaveCountAsync(savedCount);
-
-        _showSaveSuccess = true;
-        StateHasChanged();
-
-        await Task.Delay(2000);
-        _showSaveSuccess = false;
-        _saveName = string.Empty;
+        try
+        {
+            await StorageService.SaveCountAsync(savedCount);
+            _showSaveSuccess = true;
+            StateHasChanged();
+            await Task.Delay(2000);
+            _showSaveSuccess = false;
+            _saveName = string.Empty;
+        }
+        catch
+        {
+            _showSaveError = true;
+            StateHasChanged();
+            await Task.Delay(2000);
+            _showSaveError = false;
+        }
         StateHasChanged();
     }
 

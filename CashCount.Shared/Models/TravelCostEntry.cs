@@ -5,7 +5,7 @@ public class TravelCollection
     public string Id { get; set; } = Guid.NewGuid().ToString();
     public string Name { get; set; } = string.Empty;
     public string CurrencySymbol { get; set; } = "€";
-    public DateTime CreatedAt { get; set; } = DateTime.Now;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public List<TravelCostEntry> Entries { get; set; } = new();
 
     public decimal TotalIncome => Entries.Where(e => e.Type == EntryType.Income).Sum(e => e.Amount);

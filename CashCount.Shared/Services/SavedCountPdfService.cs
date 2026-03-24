@@ -187,7 +187,7 @@ public class SavedCountPdfService : ISavedCountPdfService
         RenderSignatureBox(savedCount.SecondSignature ?? new SavedCountSignature(), "Signer 2 — not signed");
 
         // ── 8. FOOTER on every page ───────────────────────────────────────────
-        var footerTs = DateTime.Now.ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture);
+        var footerTs = savedCount.SavedAt.ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture);
         foreach (var pg in pages)
         {
             pg.AppendLine("0.6 0.6 0.6 RG");
@@ -224,11 +224,6 @@ public class SavedCountPdfService : ISavedCountPdfService
             page.AppendLine("S");
         }
     }
-
-    private static string FormatMoney(string symbol, decimal amount)
-        => string.IsNullOrWhiteSpace(symbol)
-            ? amount.ToString("N2", CultureInfo.InvariantCulture)
-            : $"{symbol} {amount.ToString("N2", CultureInfo.InvariantCulture)}";
 
     private static string Sanitize(string value)
     {

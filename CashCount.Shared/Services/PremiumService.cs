@@ -93,13 +93,13 @@ public class PremiumService : IPremiumService, IDisposable
 
     public async Task SetPremiumStatusAsync(bool isPremium)
     {
-        _cachedStatus = isPremium;
+        // Update localStorage first (offline fallback)
+        await UpdateLocalStorageAsync(isPremium);
 
-        // If logged in, update Firebase
+        // If logged in, persist to Firebase — only update cache after success
         var user = await _authService.GetCurrentUserAsync();
         if (user != null)
         {
-            // Calculate expiry (1 year from now for purchases, null for deactivation)
             var expiryDate = isPremium ? DateTime.UtcNow.AddYears(1) : (DateTime?)null;
 
             await _userSyncService.UpdatePremiumStatusAsync(
@@ -107,11 +107,9 @@ public class PremiumService : IPremiumService, IDisposable
                 isPremium,
                 expiryDate);
 
-            // Also update the user profile in cache if needed
             var profile = await _userSyncService.GetUserProfileAsync(user.UserId);
             if (profile == null)
             {
-                // Create profile if it doesn't exist
                 profile = new UserProfile
                 {
                     UserId = user.UserId,
@@ -128,8 +126,8 @@ public class PremiumService : IPremiumService, IDisposable
             }
         }
 
-        // Always update localStorage as backup/offline support
-        await UpdateLocalStorageAsync(isPremium);
+        // Update in-memory cache only after all persistence succeeded
+        _cachedStatus = isPremium;
     }
 
     private async Task<bool> GetFromLocalStorageAsync()

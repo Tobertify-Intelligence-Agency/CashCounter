@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CashCount.Shared.Models;
+using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 
 namespace CashCount.Shared.Services;
@@ -7,11 +8,15 @@ namespace CashCount.Shared.Services;
 public class LocalStorageService : IStorageService
 {
     private readonly IJSRuntime _jsRuntime;
+    private readonly ILogger<LocalStorageService> _logger;
     private const string StorageKey = "cashcount_saved_counts";
+    private const string TripsStorageKey = "cashcount_saved_trips";
+    private const string AccountLedgerStorageKey = "cashcount_account_ledger";
 
-    public LocalStorageService(IJSRuntime jsRuntime)
+    public LocalStorageService(IJSRuntime jsRuntime, ILogger<LocalStorageService> logger)
     {
         _jsRuntime = jsRuntime;
+        _logger = logger;
     }
 
     public async Task<List<SavedCount>> GetSavedCountsAsync()
@@ -24,8 +29,9 @@ public class LocalStorageService : IStorageService
 
             return JsonSerializer.Deserialize<List<SavedCount>>(json) ?? new List<SavedCount>();
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to load saved counts from localStorage.");
             return new List<SavedCount>();
         }
     }
@@ -40,16 +46,11 @@ public class LocalStorageService : IStorageService
     {
         var counts = await GetSavedCountsAsync();
 
-        // Check if updating existing or adding new
         var existingIndex = counts.FindIndex(c => c.Id == count.Id);
         if (existingIndex >= 0)
-        {
             counts[existingIndex] = count;
-        }
         else
-        {
-            counts.Insert(0, count); // Add new at the beginning
-        }
+            counts.Insert(0, count);
 
         var json = JsonSerializer.Serialize(counts);
         await _jsRuntime.InvokeVoidAsync("localStorage.setItem", StorageKey, json);
@@ -69,9 +70,6 @@ public class LocalStorageService : IStorageService
         await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", StorageKey);
     }
 
-    private const string TripsStorageKey = "cashcount_saved_trips";
-    private const string AccountLedgerStorageKey = "cashcount_account_ledger";
-
     public async Task<List<TravelCollection>> GetSavedTripsAsync()
     {
         try
@@ -82,8 +80,9 @@ public class LocalStorageService : IStorageService
 
             return JsonSerializer.Deserialize<List<TravelCollection>>(json) ?? new List<TravelCollection>();
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to load saved trips from localStorage.");
             return new List<TravelCollection>();
         }
     }
@@ -132,8 +131,9 @@ public class LocalStorageService : IStorageService
 
             return JsonSerializer.Deserialize<AccountLedger>(json) ?? new AccountLedger();
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to load account ledger from localStorage.");
             return new AccountLedger();
         }
     }

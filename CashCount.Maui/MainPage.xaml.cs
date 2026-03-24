@@ -11,17 +11,9 @@ public partial class MainPage : ContentPage
 	private void SetSafeAreaPadding()
 	{
 #if ANDROID
-		// Get the status bar height on Android
-		var statusBarHeight = 0;
-		var resourceId = Android.Content.Res.Resources.System?.GetIdentifier("status_bar_height", "dimen", "android");
-		if (resourceId.HasValue && resourceId.Value > 0)
-		{
-			statusBarHeight = Android.Content.Res.Resources.System!.GetDimensionPixelSize(resourceId.Value);
-			// Convert pixels to device-independent units
-			var density = DeviceDisplay.MainDisplayInfo.Density;
-			var statusBarHeightDp = statusBarHeight / density;
-			StatusBarBackground.HeightRequest = statusBarHeightDp;
-		}
+
+        StatusBarBackground.HeightRequest = 0;
+        StatusBarBackground.IsVisible = false;
 #elif IOS || MACCATALYST
 		// iOS handles safe area automatically, but set a minimum
 		StatusBarBackground.HeightRequest = 0;
@@ -31,5 +23,5 @@ public partial class MainPage : ContentPage
 		StatusBarBackground.HeightRequest = 0;
 		StatusBarBackground.IsVisible = false;
 #endif
-	}
+    }
 }
