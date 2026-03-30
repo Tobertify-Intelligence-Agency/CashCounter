@@ -212,7 +212,7 @@
                 </div>
 
                 <div class="sc-modal-footer">
-                    <button class="btn-cancel" @onclick="ClosePanel">Cancel</button>
+                    <button class="btn-cancel" @onclick="ClosePanel">@Text["app.cancel"]</button>
                     <button class="btn-secondary-action" @onclick="() => RemoveSignatureAsync(_panelCount)"
                             disabled="@(!(_panelCount.Signature?.HasAnySignature ?? false) && !HasWorkingSignature())">
                         @Text["savedCounts.removeSignature"]
@@ -273,7 +273,7 @@
                 </div>
 
                 <div class="sc-modal-footer">
-                    <button class="btn-cancel" @onclick="ClosePanel">Cancel</button>
+                    <button class="btn-cancel" @onclick="ClosePanel">@Text["app.cancel"]</button>
                     @if (_ledger.Accounts.Count > 0)
                     {
                         <button class="btn-load" @onclick="() => ConfirmBookingAsync(_panelCount)"
