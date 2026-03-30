@@ -1,0 +1,80 @@
+@using CashCount.Shared.Models
+@inject IAppTextService Text
+
+<div class="sc-modal-backdrop" @onclick="Close">
+    <div class="sc-modal sc-modal-sm" @onclick:stopPropagation>
+        <div class="sc-modal-header">
+            <div>
+                <h3>@Text["savedCounts.bookTitle"]</h3>
+                <p>@PanelCount.CurrencySymbol @PanelCount.TotalAmount.ToString("N2") will be added as a transaction.</p>
+            </div>
+            <button class="sc-modal-close" @onclick="Close" aria-label="@Text["savedCounts.close"]">✕</button>
+        </div>
+
+        <div class="sc-modal-body">
+            @if (Ledger.Accounts.Count == 0)
+            {
+                <p class="booking-no-accounts">@Text["savedCounts.noAccounts"]</p>
+            }
+            else
+            {
+                <div class="booking-direction-toggle">
+                    <button class="booking-direction-btn @(BookingDirection == CashFlowDirection.Incoming ? "active" : null)"
+                            @onclick="() => BookingDirectionChanged.InvokeAsync(CashFlowDirection.Incoming)">↑ @Text["funds.modal.incoming"]</button>
+                    <button class="booking-direction-btn @(BookingDirection == CashFlowDirection.Outgoing ? "active" : null)"
+                            @onclick="() => BookingDirectionChanged.InvokeAsync(CashFlowDirection.Outgoing)">↓ @Text["funds.modal.outgoing"]</button>
+                </div>
+                <div class="booking-form">
+                    <div class="saved-signature-field">
+                        <label>@Text["savedCounts.account"]</label>
+                        <select class="saved-signature-input" value="@BookingAccountId" @onchange="OnBookingAccountChanged">
+                            <option value="">— @Text["savedCounts.selectAccount"] —</option>
+                            @foreach (var acc in Ledger.Accounts)
+                            {
+                                <option value="@acc.Id">@acc.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="saved-signature-field">
+                        <label>@Text["travel.field.description"]</label>
+                        <input class="saved-signature-input" value="@BookingDescription" @oninput="OnBookingDescriptionInput" placeholder="@Text["savedCounts.transactionDescriptionPlaceholder"]" />
+                    </div>
+                </div>
+                @if (BookingError)
+                {
+                    <span class="saved-signature-feedback error">@Text["savedCounts.selectAccountError"]</span>
+                }
+            }
+        </div>
+
+        <div class="sc-modal-footer">
+            <button class="btn-cancel" @onclick="Close">@Text["app.cancel"]</button>
+            @if (Ledger.Accounts.Count > 0)
+            {
+                <button class="btn-load" @onclick="() => ConfirmBooking.InvokeAsync()" disabled="@(string.IsNullOrEmpty(BookingAccountId))">
+                    @Text["savedCounts.confirmBooking"]
+                </button>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public SavedCount PanelCount { get; set; } = default!;
+    [Parameter, EditorRequired] public AccountLedger Ledger { get; set; } = default!;
+    [Parameter] public CashFlowDirection BookingDirection { get; set; }
+    [Parameter] public EventCallback<CashFlowDirection> BookingDirectionChanged { get; set; }
+    [Parameter] public string BookingAccountId { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> BookingAccountIdChanged { get; set; }
+    [Parameter] public string BookingDescription { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> BookingDescriptionChanged { get; set; }
+    [Parameter] public bool BookingError { get; set; }
+    [Parameter] public EventCallback Close { get; set; }
+    [Parameter] public EventCallback ConfirmBooking { get; set; }
+
+    private Task OnBookingAccountChanged(ChangeEventArgs args)
+        => BookingAccountIdChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty);
+
+    private Task OnBookingDescriptionInput(ChangeEventArgs args)
+        => BookingDescriptionChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty);
+}

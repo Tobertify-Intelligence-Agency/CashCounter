@@ -1,0 +1,115 @@
+@using CashCount.Shared.Models
+@inject IAppTextService Text
+
+<div class="sc-modal-backdrop" @onclick="Close">
+    <div class="sc-modal" @onclick:stopPropagation>
+        <div class="sc-modal-header">
+            <div>
+                <h3>@Text.Format("savedCounts.signTitle", PanelCount.Name)</h3>
+                <p>@Text["savedCounts.signBody"]</p>
+            </div>
+            <button class="sc-modal-close" @onclick="Close" aria-label="@Text["savedCounts.close"]">✕</button>
+        </div>
+
+        <div class="sc-modal-body">
+            @if (ShowSaveSuccess)
+            {
+                <div class="saved-signature-feedback success" style="margin-bottom:0.75rem">@Text["savedCounts.signatureSaved"]</div>
+            }
+            else if (ShowSaveError)
+            {
+                <div class="saved-signature-feedback error" style="margin-bottom:0.75rem">@Text["savedCounts.signatureError"]</div>
+            }
+
+            <div class="sig-tabs">
+                <button class="sig-tab @(ActiveSignerTab == 1 ? "active" : null)"
+                        @onclick="() => SetSignerTab.InvokeAsync(1)">
+                    @Text["savedCounts.signer1"]
+                    @if (!string.IsNullOrWhiteSpace(SignerName))
+                    {
+                        <span class="sig-tab-dot"></span>
+                    }
+                </button>
+                <button class="sig-tab @(ActiveSignerTab == 2 ? "active" : null)"
+                        @onclick="() => SetSignerTab.InvokeAsync(2)">
+                    @Text["savedCounts.signer2"]
+                    @if (!string.IsNullOrWhiteSpace(SignerName2))
+                    {
+                        <span class="sig-tab-dot"></span>
+                    }
+                </button>
+            </div>
+
+            @if (ActiveSignerTab == 1)
+            {
+                <div class="sig-tab-panel">
+                    <div class="saved-signature-form-grid">
+                        <div class="saved-signature-field">
+                            <label for="signature-name">@Text["savedCounts.signerName"]</label>
+                            <input id="signature-name" class="saved-signature-input" value="@SignerName" @oninput="OnSignerNameInput" placeholder="@Text["savedCounts.signerNamePlaceholder"]" />
+                        </div>
+                    </div>
+                    <div class="saved-signature-canvas-wrap @(null)">
+                        <div class="saved-signature-canvas-header">
+                            <span>@Text["savedCounts.drawSignature"]</span>
+                            <button class="btn-link-action" @onclick="() => ClearDrawnSignature.InvokeAsync(false)" disabled="@(false)">@Text["savedCounts.clearSignature"]</button>
+                        </div>
+                        <canvas id="@SignatureCanvasId" class="saved-signature-canvas"></canvas>
+                    </div>
+                </div>
+            }
+
+            @if (ActiveSignerTab == 2)
+            {
+                <div class="sig-tab-panel">
+                    <div class="saved-signature-form-grid">
+                        <div class="saved-signature-field">
+                            <label for="signature-name-2">@Text["savedCounts.signerName"]</label>
+                            <input id="signature-name-2" class="saved-signature-input" value="@SignerName2" @oninput="OnSignerName2Input" placeholder="@Text["savedCounts.signerName2Placeholder"]" />
+                        </div>
+                    </div>
+                    <div class="saved-signature-canvas-wrap @(null)">
+                        <div class="saved-signature-canvas-header">
+                            <span>@Text["savedCounts.drawSignature"]</span>
+                            <button class="btn-link-action" @onclick="() => ClearDrawnSignature.InvokeAsync(true)" disabled="@(false)">@Text["savedCounts.clearSignature"]</button>
+                        </div>
+                        <canvas id="@SignatureCanvasId2" class="saved-signature-canvas"></canvas>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="sc-modal-footer">
+            <button class="btn-cancel" @onclick="Close">@Text["app.cancel"]</button>
+            <button class="btn-secondary-action" @onclick="() => RemoveSignature.InvokeAsync()" disabled="@(!CanRemoveSignature)">
+                @Text["savedCounts.removeSignature"]
+            </button>
+            <button class="btn-load" @onclick="() => SaveSignature.InvokeAsync()">@Text["savedCounts.saveSignature"]</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public SavedCount PanelCount { get; set; } = default!;
+    [Parameter] public int ActiveSignerTab { get; set; }
+    [Parameter] public string SignerName { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> SignerNameChanged { get; set; }
+    [Parameter] public string SignerName2 { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> SignerName2Changed { get; set; }
+    [Parameter] public string SignatureCanvasId { get; set; } = string.Empty;
+    [Parameter] public string SignatureCanvasId2 { get; set; } = string.Empty;
+    [Parameter] public bool ShowSaveSuccess { get; set; }
+    [Parameter] public bool ShowSaveError { get; set; }
+    [Parameter] public bool CanRemoveSignature { get; set; }
+    [Parameter] public EventCallback Close { get; set; }
+    [Parameter] public EventCallback<int> SetSignerTab { get; set; }
+    [Parameter] public EventCallback<bool> ClearDrawnSignature { get; set; }
+    [Parameter] public EventCallback SaveSignature { get; set; }
+    [Parameter] public EventCallback RemoveSignature { get; set; }
+
+    private Task OnSignerNameInput(ChangeEventArgs args)
+        => SignerNameChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty);
+
+    private Task OnSignerName2Input(ChangeEventArgs args)
+        => SignerName2Changed.InvokeAsync(args.Value?.ToString() ?? string.Empty);
+}

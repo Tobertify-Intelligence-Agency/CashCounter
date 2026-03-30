@@ -1,0 +1,82 @@
+@using CashCount.Shared.Models
+@inject IAppTextService Text
+
+<div class="saved-count-card sc-compact">
+    <div class="sc-main-row">
+        <div class="sc-info">
+            <span class="sc-name">@Saved.Name</span>
+            <div class="sc-meta">
+                <span class="sc-date">@Saved.SavedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</span>
+                @if (Saved.Signature?.HasAnySignature == true)
+                {
+                    <span class="sc-pill sc-pill-signed">@Text["savedCounts.signed"]</span>
+                }
+                @if (Saved.LedgerTransactionId != null)
+                {
+                    <span class="sc-pill sc-pill-booked">@Text["savedCounts.booked"]</span>
+                }
+            </div>
+        </div>
+        <div class="sc-right">
+            <span class="sc-amount">@Saved.CurrencySymbol @Saved.TotalAmount.ToString("N2")</span>
+            <button class="btn-kebab @(IsMenuOpen ? "active" : null)"
+                    @onclick="() => ToggleMenu.InvokeAsync(Saved.Id)"
+                    aria-label="@Text["savedCounts.actions"]">⋮</button>
+        </div>
+    </div>
+
+    @if (Saved.Denominations.Any())
+    {
+        <details class="denomination-details sc-denom-details">
+            <summary>@Saved.Denominations.Count @Text["cashCounter.items"]</summary>
+            <div class="denomination-list">
+                @foreach (var denom in Saved.Denominations)
+                {
+                    <span class="denom-item @(denom.IsCoin ? "coin" : "banknote")">
+                        @denom.Quantity × @denom.DisplayName
+                    </span>
+                }
+            </div>
+        </details>
+    }
+
+    @if (IsMenuOpen)
+    {
+        <div class="sc-action-menu">
+            <button class="sc-menu-item" @onclick="() => Load.InvokeAsync(Saved)">
+                <span>📥</span> @Text["savedCounts.load"]
+            </button>
+            <button class="sc-menu-item" @onclick="() => Sign.InvokeAsync(Saved)">
+                <span>✏️</span> @Text["savedCounts.sign"]
+            </button>
+            @if (Saved.LedgerTransactionId == null)
+            {
+                <button class="sc-menu-item" @onclick="() => Book.InvokeAsync(Saved)">
+                    <span>📒</span> @Text["savedCounts.book"]
+                </button>
+            }
+            <button class="sc-menu-item" @onclick="() => ExportPdf.InvokeAsync(Saved)">
+                <span>📄</span> @Text["savedCounts.exportPdf"]
+            </button>
+            <button class="sc-menu-item" @onclick="() => ExportReceipt.InvokeAsync(Saved)">
+                <span>🧾</span> @Text["savedCounts.exportReceipt"]
+            </button>
+            <div class="sc-menu-divider"></div>
+            <button class="sc-menu-item sc-menu-item-danger" @onclick="() => Delete.InvokeAsync(Saved.Id)">
+                <span>🗑️</span> @Text["app.delete"]
+            </button>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public SavedCount Saved { get; set; } = default!;
+    [Parameter] public bool IsMenuOpen { get; set; }
+    [Parameter] public EventCallback<string> ToggleMenu { get; set; }
+    [Parameter] public EventCallback<SavedCount> Load { get; set; }
+    [Parameter] public EventCallback<SavedCount> Sign { get; set; }
+    [Parameter] public EventCallback<SavedCount> Book { get; set; }
+    [Parameter] public EventCallback<SavedCount> ExportPdf { get; set; }
+    [Parameter] public EventCallback<SavedCount> ExportReceipt { get; set; }
+    [Parameter] public EventCallback<string> Delete { get; set; }
+}

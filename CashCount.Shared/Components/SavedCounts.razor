@@ -54,236 +54,52 @@
         <div class="saved-counts-list">
             @foreach (var saved in _savedCounts)
             {
-                <div class="saved-count-card sc-compact">
-
-                    <div class="sc-main-row">
-                        <div class="sc-info">
-                            <span class="sc-name">@saved.Name</span>
-                            <div class="sc-meta">
-                                <span class="sc-date">@saved.SavedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</span>
-                                @if (saved.Signature?.HasAnySignature == true)
-                                {
-                                    <span class="sc-pill sc-pill-signed">@Text["savedCounts.signed"]</span>
-                                }
-                                @if (saved.LedgerTransactionId != null)
-                                {
-                                    <span class="sc-pill sc-pill-booked">@Text["savedCounts.booked"]</span>
-                                }
-                            </div>
-                        </div>
-                        <div class="sc-right">
-                            <span class="sc-amount">@saved.CurrencySymbol @saved.TotalAmount.ToString("N2")</span>
-                            <button class="btn-kebab @(_menuOpenId == saved.Id ? "active" : null)"
-                                    @onclick="() => ToggleCardMenu(saved.Id)"
-                                    aria-label="@Text["savedCounts.actions"]">⋮</button>
-                        </div>
-                    </div>
-
-                    @if (saved.Denominations.Any())
-                    {
-                        <details class="denomination-details sc-denom-details">
-                            <summary>@saved.Denominations.Count @Text["cashCounter.items"]</summary>
-                            <div class="denomination-list">
-                                @foreach (var denom in saved.Denominations)
-                                {
-                                    <span class="denom-item @(denom.IsCoin ? "coin" : "banknote")">
-                                        @denom.Quantity × @denom.DisplayName
-                                    </span>
-                                }
-                            </div>
-                        </details>
-                    }
-
-                    @if (_menuOpenId == saved.Id)
-                    {
-                        <div class="sc-action-menu">
-                            <button class="sc-menu-item" @onclick="() => MenuLoad(saved)">
-                                <span>📥</span> @Text["savedCounts.load"]
-                            </button>
-                            <button class="sc-menu-item" @onclick="() => MenuSign(saved)">
-                                <span>✏️</span> @Text["savedCounts.sign"]
-                            </button>
-                            @if (saved.LedgerTransactionId == null)
-                            {
-                                <button class="sc-menu-item" @onclick="() => MenuBook(saved)">
-                                    <span>📒</span> @Text["savedCounts.book"]
-                                </button>
-                            }
-                            <button class="sc-menu-item" @onclick="() => MenuExportPdf(saved)">
-                                <span>📄</span> @Text["savedCounts.exportPdf"]
-                            </button>
-                            <button class="sc-menu-item" @onclick="() => MenuExportReceipt(saved)">
-                                <span>🧾</span> @Text["savedCounts.exportReceipt"]
-                            </button>
-                            <div class="sc-menu-divider"></div>
-                            <button class="sc-menu-item sc-menu-item-danger" @onclick="() => MenuDelete(saved.Id)">
-                                <span>🗑️</span> @Text["app.delete"]
-                            </button>
-                        </div>
-                    }
-
-                </div>
+                <SavedCountCard Saved="saved"
+                                IsMenuOpen="@(_menuOpenId == saved.Id)"
+                                ToggleMenu="ToggleCardMenu"
+                                Load="MenuLoad"
+                                Sign="MenuSign"
+                                Book="MenuBook"
+                                ExportPdf="MenuExportPdf"
+                                ExportReceipt="MenuExportReceipt"
+                                Delete="MenuDelete" />
             }
         </div>
     }
 
-    <!-- ── Sign modal ── -->
-    @if (_panelType == "sign" && _panelCount != null)
+    @if (IsSignPanelOpen)
     {
-        <div class="sc-modal-backdrop" @onclick="ClosePanel">
-            <div class="sc-modal" @onclick:stopPropagation>
-                <div class="sc-modal-header">
-                    <div>
-                        <h3>@Text.Format("savedCounts.signTitle", _panelCount.Name)</h3>
-                        <p>@Text["savedCounts.signBody"]</p>
-                    </div>
-                    <button class="sc-modal-close" @onclick="ClosePanel" aria-label="@Text["savedCounts.close"]">✕</button>
-                </div>
-
-                <div class="sc-modal-body">
-                    @if (_signatureSaveState == SignatureSaveState.Saved)
-                    {
-                        <div class="saved-signature-feedback success" style="margin-bottom:0.75rem">@Text["savedCounts.signatureSaved"]</div>
-                    }
-                    else if (_signatureSaveState == SignatureSaveState.Error)
-                    {
-                        <div class="saved-signature-feedback error" style="margin-bottom:0.75rem">@Text["savedCounts.signatureError"]</div>
-                    }
-
-                    <!-- Signer tabs -->
-                    <div class="sig-tabs">
-                        <button class="sig-tab @(_activeSignerTab == 1 ? "active" : null)"
-                                @onclick="() => SetSignerTab(1)">
-                            @Text["savedCounts.signer1"]
-                            @if (!string.IsNullOrWhiteSpace(_signerName))
-                            {
-                                <span class="sig-tab-dot"></span>
-                            }
-                        </button>
-                        <button class="sig-tab @(_activeSignerTab == 2 ? "active" : null)"
-                                @onclick="() => SetSignerTab(2)">
-                            @Text["savedCounts.signer2"]
-                            @if (!string.IsNullOrWhiteSpace(_signerName2))
-                            {
-                                <span class="sig-tab-dot"></span>
-                            }
-                        </button>
-                    </div>
-
-                    <!-- @Text["savedCounts.signer1"] panel -->
-                    @if (_activeSignerTab == 1)
-                    {
-                        <div class="sig-tab-panel">
-                            <div class="saved-signature-form-grid">
-                                <div class="saved-signature-field">
-                                    <label for="signature-name">@Text["savedCounts.signerName"]</label>
-                                    <input id="signature-name" class="saved-signature-input" @bind="_signerName" @bind:event="oninput" placeholder="@Text["savedCounts.signerNamePlaceholder"]" />
-                                </div>
-                            </div>
-                            <div class="saved-signature-canvas-wrap @(null)">
-                                <div class="saved-signature-canvas-header">
-                                    <span>@Text["savedCounts.drawSignature"]</span>
-                                    <button class="btn-link-action" @onclick="() => ClearDrawnSignatureAsync(false)" disabled="@(false)" >@Text["savedCounts.clearSignature"]</button>
-                                </div>
-                                <canvas id="@_signatureCanvasId" class="saved-signature-canvas"></canvas>
-                            </div>
-                        </div>
-                    }
-
-                    <!-- @Text["savedCounts.signer2"] panel -->
-                    @if (_activeSignerTab == 2)
-                    {
-                        <div class="sig-tab-panel">
-                            <div class="saved-signature-form-grid">
-                                <div class="saved-signature-field">
-                                    <label for="signature-name-2">@Text["savedCounts.signerName"]</label>
-                                    <input id="signature-name-2" class="saved-signature-input" @bind="_signerName2" @bind:event="oninput" placeholder="@Text["savedCounts.signerName2Placeholder"]" />
-                                </div>
-                            </div>
-                            <div class="saved-signature-canvas-wrap @(null)">
-                                <div class="saved-signature-canvas-header">
-                                    <span>@Text["savedCounts.drawSignature"]</span>
-                                    <button class="btn-link-action" @onclick="() => ClearDrawnSignatureAsync(true)" disabled="@(false)" >@Text["savedCounts.clearSignature"]</button>
-                                </div>
-                                <canvas id="@_signatureCanvasId2" class="saved-signature-canvas"></canvas>
-                            </div>
-                        </div>
-                    }
-                </div>
-
-                <div class="sc-modal-footer">
-                    <button class="btn-cancel" @onclick="ClosePanel">@Text["app.cancel"]</button>
-                    <button class="btn-secondary-action" @onclick="() => RemoveSignatureAsync(_panelCount)"
-                            disabled="@(!(_panelCount.Signature?.HasAnySignature ?? false) && !HasWorkingSignature())">
-                        @Text["savedCounts.removeSignature"]
-                    </button>
-                    <button class="btn-load" @onclick="() => SaveSignatureAsync(_panelCount)">@Text["savedCounts.saveSignature"]</button>
-                </div>
-            </div>
-        </div>
+        <SavedCountSignModal PanelCount="@_panelCount!"
+                             ActiveSignerTab="@_activeSignerTab"
+                             SetSignerTab="SetSignerTab"
+                             SignerName="@_signerName"
+                             SignerNameChanged="OnSignerNameChanged"
+                             SignerName2="@_signerName2"
+                             SignerName2Changed="OnSignerName2Changed"
+                             SignatureCanvasId="@_signatureCanvasId"
+                             SignatureCanvasId2="@_signatureCanvasId2"
+                             ShowSaveSuccess="@(_signatureSaveState == SignatureSaveState.Saved)"
+                             ShowSaveError="@(_signatureSaveState == SignatureSaveState.Error)"
+                             CanRemoveSignature="@CanRemoveSignature"
+                             ClearDrawnSignature="ClearDrawnSignatureAsync"
+                             SaveSignature="SaveCurrentPanelSignatureAsync"
+                             RemoveSignature="RemoveCurrentPanelSignatureAsync"
+                             Close="ClosePanel" />
     }
 
-    <!-- ── Book modal ── -->
-    @if (_panelType == "book" && _panelCount != null)
+    @if (IsBookPanelOpen)
     {
-        <div class="sc-modal-backdrop" @onclick="ClosePanel">
-            <div class="sc-modal sc-modal-sm" @onclick:stopPropagation>
-                <div class="sc-modal-header">
-                    <div>
-                        <h3>@Text["savedCounts.bookTitle"]</h3>
-                        <p>@_panelCount.CurrencySymbol @_panelCount.TotalAmount.ToString("N2") will be added as a transaction.</p>
-                    </div>
-                    <button class="sc-modal-close" @onclick="ClosePanel" aria-label="@Text["savedCounts.close"]">✕</button>
-                </div>
-
-                <div class="sc-modal-body">
-                    @if (_ledger.Accounts.Count == 0)
-                    {
-                        <p class="booking-no-accounts">@Text["savedCounts.noAccounts"]</p>
-                    }
-                    else
-                    {
-                        <div class="booking-direction-toggle">
-                            <button class="booking-direction-btn @(_bookingDirection == CashFlowDirection.Incoming ? "active" : null)"
-                                    @onclick="() => _bookingDirection = CashFlowDirection.Incoming" >↑ @Text["funds.modal.incoming"]</button>
-                            <button class="booking-direction-btn @(_bookingDirection == CashFlowDirection.Outgoing ? "active" : null)"
-                                    @onclick="() => _bookingDirection = CashFlowDirection.Outgoing" >↓ @Text["funds.modal.outgoing"]</button>
-                        </div>
-                        <div class="booking-form">
-                            <div class="saved-signature-field">
-                                <label>@Text["savedCounts.account"]</label>
-                                <select class="saved-signature-input" @bind="_bookingAccountId">
-                                    <option value="">— @Text["savedCounts.selectAccount"] —</option>
-                                    @foreach (var acc in _ledger.Accounts)
-                                    {
-                                        <option value="@acc.Id">@acc.Name</option>
-                                    }
-                                </select>
-                            </div>
-                            <div class="saved-signature-field">
-                                <label>@Text["travel.field.description"]</label>
-                                <input class="saved-signature-input" @bind="_bookingDescription" @bind:event="oninput" placeholder="@Text["savedCounts.transactionDescriptionPlaceholder"]" />
-                            </div>
-                        </div>
-                        @if (_bookingError)
-                        {
-                            <span class="saved-signature-feedback error">@Text["savedCounts.selectAccountError"]</span>
-                        }
-                    }
-                </div>
-
-                <div class="sc-modal-footer">
-                    <button class="btn-cancel" @onclick="ClosePanel">@Text["app.cancel"]</button>
-                    @if (_ledger.Accounts.Count > 0)
-                    {
-                        <button class="btn-load" @onclick="() => ConfirmBookingAsync(_panelCount)"
-                                disabled="@(string.IsNullOrEmpty(_bookingAccountId))">
-                            @Text["savedCounts.confirmBooking"]
-                        </button>
-                    }
-                </div>
-            </div>
-        </div>
+        <SavedCountBookModal PanelCount="@_panelCount!"
+                             Ledger="@_ledger"
+                             BookingDirection="@_bookingDirection"
+                             BookingDirectionChanged="OnBookingDirectionChanged"
+                             BookingAccountId="@_bookingAccountId"
+                             BookingAccountIdChanged="OnBookingAccountIdChanged"
+                             BookingDescription="@_bookingDescription"
+                             BookingDescriptionChanged="OnBookingDescriptionChanged"
+                             BookingError="@_bookingError"
+                             ConfirmBooking="ConfirmCurrentBookingAsync"
+                             Close="ClosePanel" />
     }
 </div>
 
@@ -318,6 +134,10 @@
     private string _bookingDescription = string.Empty;
     private bool _bookingError = false;
 
+    private bool IsSignPanelOpen => _panelType == "sign" && _panelCount != null;
+    private bool IsBookPanelOpen => _panelType == "book" && _panelCount != null;
+    private bool CanRemoveSignature => (_panelCount?.Signature?.HasAnySignature ?? false) || HasWorkingSignature();
+
     protected override async Task OnInitializedAsync()
     {
         _isPremium = await PremiumService.IsFeatureEnabledAsync(PremiumFeature.LoadCounts);
@@ -330,9 +150,9 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_panelType == "sign" && _panelCount != null)
+        if (IsSignPanelOpen)
         {
-            var canvasKey = $"{_panelCount.Id}:{_activeSignerTab}";
+            var canvasKey = $"{_panelCount!.Id}:{_activeSignerTab}";
             if (canvasKey != _initializedCanvasKey)
             {
                 _initializedCanvasKey = canvasKey;
@@ -426,6 +246,39 @@
         _activeSignerTab = 1;
     }
 
+    private Task OnSignerNameChanged(string value)
+    {
+        _signerName = value;
+        _signatureSaveState = SignatureSaveState.None;
+        return Task.CompletedTask;
+    }
+
+    private Task OnSignerName2Changed(string value)
+    {
+        _signerName2 = value;
+        _signatureSaveState = SignatureSaveState.None;
+        return Task.CompletedTask;
+    }
+
+    private Task OnBookingDirectionChanged(CashFlowDirection direction)
+    {
+        _bookingDirection = direction;
+        return Task.CompletedTask;
+    }
+
+    private Task OnBookingAccountIdChanged(string accountId)
+    {
+        _bookingAccountId = accountId;
+        _bookingError = false;
+        return Task.CompletedTask;
+    }
+
+    private Task OnBookingDescriptionChanged(string description)
+    {
+        _bookingDescription = description;
+        return Task.CompletedTask;
+    }
+
     private async Task SetSignerTab(int tab)
     {
         if (_activeSignerTab == 1)
@@ -435,6 +288,12 @@
 
         _activeSignerTab = tab;
         _initializedCanvasKey = null;
+    }
+
+    private async Task SaveCurrentPanelSignatureAsync()
+    {
+        if (_panelCount != null)
+            await SaveSignatureAsync(_panelCount);
     }
 
     private async Task SaveSignatureAsync(SavedCount saved)
@@ -471,6 +330,12 @@
         await StorageService.SaveCountAsync(saved);
         _signatureSaveState = SignatureSaveState.Saved;
         await LoadSavedCounts();
+    }
+
+    private async Task RemoveCurrentPanelSignatureAsync()
+    {
+        if (_panelCount != null)
+            await RemoveSignatureAsync(_panelCount);
     }
 
     private async Task RemoveSignatureAsync(SavedCount saved)
@@ -514,6 +379,12 @@
            || !string.IsNullOrWhiteSpace(_signerName2)
            || _drawnStrokes2.Any(s => s.Points.Count > 0);
 
+    private async Task ConfirmCurrentBookingAsync()
+    {
+        if (_panelCount != null)
+            await ConfirmBookingAsync(_panelCount);
+    }
+
     private async Task ConfirmBookingAsync(SavedCount saved)
     {
         if (string.IsNullOrEmpty(_bookingAccountId))
@@ -543,7 +414,8 @@
 
     private async Task CollectInProgressSignatureAsync(SavedCount saved)
     {
-        if (_panelType != "sign" || _panelCount?.Id != saved.Id) return;
+        if (_panelType != "sign" || _panelCount?.Id != saved.Id)
+            return;
 
         _drawnStrokes = await GetCurrentDrawnSignatureAsync();
         _drawnStrokes2 = await GetCurrentDrawnSignatureAsync(second: true);
