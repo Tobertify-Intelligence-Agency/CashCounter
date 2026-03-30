@@ -79,7 +79,7 @@ public class PremiumService : IPremiumService, IDisposable
 
     public async Task<bool> IsFeatureEnabledAsync(PremiumFeature feature)
     {
-        var isPremium = await IsPremiumAsync();
+        var isPremium = true;// await IsPremiumAsync();
 
         // Define which features require premium
         return feature switch

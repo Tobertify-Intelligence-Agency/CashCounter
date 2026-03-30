@@ -194,8 +194,7 @@ public class MauiUserSyncService : IUserSyncService
             Signature = new SavedCountSignatureDto
             {
                 SignerName = count.Signature.SignerName,
-                TypedSignature = count.Signature.TypedSignature,
-                Mode = (int)count.Signature.Mode,
+                TypedSignature = count.Signature.TypedSignature,                
                 SignedAt = count.Signature.SignedAt?.ToString("o"),
                 DrawnStrokes = count.Signature.DrawnStrokes.Select(stroke => new SignatureStrokeDto
                 {
@@ -233,8 +232,7 @@ public class MauiUserSyncService : IUserSyncService
                 : new SavedCountSignature
                 {
                     SignerName = dto.Signature.SignerName ?? string.Empty,
-                    TypedSignature = dto.Signature.TypedSignature ?? string.Empty,
-                    Mode = Enum.IsDefined(typeof(SignatureMode), dto.Signature.Mode) ? (SignatureMode)dto.Signature.Mode : SignatureMode.Drawn,
+                    TypedSignature = dto.Signature.TypedSignature ?? string.Empty,                    
                     SignedAt = string.IsNullOrWhiteSpace(dto.Signature.SignedAt)
                         ? null
                         : DateTime.TryParse(dto.Signature.SignedAt, out var signedAt) ? signedAt : null,

@@ -44,6 +44,7 @@ public static class MauiProgram
 		builder.Services.AddScoped<IFileExportService, MauiFileExportService>();
 		builder.Services.AddScoped<ISavedCountPdfService, SavedCountPdfService>();
 		builder.Services.AddScoped<SavedCountExportService>();
+		builder.Services.AddScoped<SavedCountReceiptService>();
 		builder.Services.AddScoped<IPremiumService, PremiumService>();
 		builder.Services.AddScoped<IAppTextService, AppTextService>();
 

@@ -32,6 +32,7 @@ builder.Services.AddScoped<IStorageService, LocalStorageService>();
 builder.Services.AddScoped<IFileExportService, WebFileExportService>();
 builder.Services.AddScoped<ISavedCountPdfService, SavedCountPdfService>();
 builder.Services.AddScoped<SavedCountExportService>();
+builder.Services.AddScoped<SavedCountReceiptService>();
 builder.Services.AddScoped<IPremiumService, PremiumService>();
 builder.Services.AddScoped<IAppTextService, AppTextService>();
 

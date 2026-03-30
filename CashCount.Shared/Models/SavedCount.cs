@@ -13,6 +13,7 @@ public class SavedCount
     public List<DenominationCount> Denominations { get; set; } = new();
     public SavedCountSignature Signature { get; set; } = new();
     public SavedCountSignature SecondSignature { get; set; } = new();
+    public string? LedgerTransactionId { get; set; }
 }
 
 public class DenominationCount
@@ -26,20 +27,13 @@ public class DenominationCount
 public class SavedCountSignature
 {
     public string SignerName { get; set; } = string.Empty;
-    public string TypedSignature { get; set; } = string.Empty;
-    public SignatureMode Mode { get; set; } = SignatureMode.Drawn;
+    public string TypedSignature { get; set; } = string.Empty;    
     public DateTime? SignedAt { get; set; }
     public List<SignatureStroke> DrawnStrokes { get; set; } = new();
 
     public bool HasTypedSignature => !string.IsNullOrWhiteSpace(TypedSignature);
     public bool HasDrawnSignature => DrawnStrokes.Any(s => s.Points.Count > 0);
     public bool HasAnySignature => HasDrawnSignature || HasTypedSignature || !string.IsNullOrWhiteSpace(SignerName);
-}
-
-public enum SignatureMode
-{
-    Drawn = 0,
-    Typed = 1
 }
 
 public class SignatureStroke

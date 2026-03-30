@@ -5,6 +5,7 @@
 @inject IPremiumService PremiumService
 @inject NavigationManager NavigationManager
 @inject SavedCountExportService SavedCountExportService
+@inject SavedCountReceiptService SavedCountReceiptService
 @inject IJSRuntime JSRuntime
 
 <div class="saved-counts">
@@ -52,154 +53,235 @@
         <div class="saved-counts-list">
             @foreach (var saved in _savedCounts)
             {
-                var isSigning = _editingCountId == saved.Id;
+                <div class="saved-count-card sc-compact">
 
-                <div class="saved-count-card">
-                    <div class="saved-count-header">
-                        <div>
-                            <h3>@saved.Name</h3>
-                            <span class="saved-date">@saved.SavedAt.ToString("dd.MM.yyyy HH:mm")</span>
+                    <div class="sc-main-row">
+                        <div class="sc-info">
+                            <span class="sc-name">@saved.Name</span>
+                            <div class="sc-meta">
+                                <span class="sc-date">@saved.SavedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</span>
+                                @if (saved.Signature?.HasAnySignature == true)
+                                {
+                                    <span class="sc-pill sc-pill-signed">Signed</span>
+                                }
+                                @if (saved.LedgerTransactionId != null)
+                                {
+                                    <span class="sc-pill sc-pill-booked">Booked</span>
+                                }
+                            </div>
                         </div>
-                        @if (saved.Signature?.HasAnySignature == true)
-                        {
-                            <span class="saved-signature-badge">Signed</span>
-                        }
-                    </div>
-
-                    <div class="saved-count-amount">
-                        <span class="currency-symbol">@saved.CurrencySymbol</span>
-                        <span class="total-value">@saved.TotalAmount.ToString("N2")</span>
-                    </div>
-                    <div class="saved-count-details">
-                        <span class="detail-item">
-                            <span class="detail-label">Banknotes:</span>
-                            <span class="detail-value">@saved.CurrencySymbol @saved.BanknotesTotal.ToString("N2")</span>
-                        </span>
-                        <span class="detail-item">
-                            <span class="detail-label">Coins:</span>
-                            <span class="detail-value">@saved.CurrencySymbol @saved.CoinsTotal.ToString("N2")</span>
-                        </span>
+                        <div class="sc-right">
+                            <span class="sc-amount">@saved.CurrencySymbol @saved.TotalAmount.ToString("N2")</span>
+                            <button class="btn-kebab @(_menuOpenId == saved.Id ? "active" : null)"
+                                    @onclick="() => ToggleCardMenu(saved.Id)"
+                                    aria-label="Actions">⋮</button>
+                        </div>
                     </div>
 
                     @if (saved.Denominations.Any())
                     {
-                        <details class="denomination-details">
-                            <summary>View Details (@saved.Denominations.Count items)</summary>
+                        <details class="denomination-details sc-denom-details">
+                            <summary>@saved.Denominations.Count items</summary>
                             <div class="denomination-list">
                                 @foreach (var denom in saved.Denominations)
                                 {
                                     <span class="denom-item @(denom.IsCoin ? "coin" : "banknote")">
-                                        @denom.Quantity x @denom.DisplayName
+                                        @denom.Quantity × @denom.DisplayName
                                     </span>
                                 }
                             </div>
                         </details>
                     }
 
-                    @if (saved.Signature?.HasAnySignature == true)
+                    @if (_menuOpenId == saved.Id)
                     {
-                        <div class="saved-signature-summary">
-                            <div>
-                                <strong>@(string.IsNullOrWhiteSpace(saved.Signature.SignerName) ? "Signed count" : saved.Signature.SignerName)</strong>
-                                <span>
-                                    @if (saved.Signature.SignedAt.HasValue)
-                                    {
-                                        @saved.Signature.SignedAt.Value.ToString("dd.MM.yyyy HH:mm")
-                                    }
-                                    else
-                                    {
-                                        @:Signature saved
-                                    }
-                                </span>
-                            </div>
-                            <span class="saved-signature-type">@(saved.Signature.HasDrawnSignature ? "Drawn" : "Typed")</span>
+                        <div class="sc-action-menu">
+                            <button class="sc-menu-item" @onclick="() => MenuLoad(saved)">
+                                <span>📥</span> Load
+                            </button>
+                            <button class="sc-menu-item" @onclick="() => MenuSign(saved)">
+                                <span>✏️</span> Sign
+                            </button>
+                            @if (saved.LedgerTransactionId == null)
+                            {
+                                <button class="sc-menu-item" @onclick="() => MenuBook(saved)">
+                                    <span>📒</span> Book
+                                </button>
+                            }
+                            <button class="sc-menu-item" @onclick="() => MenuExportPdf(saved)">
+                                <span>📄</span> Export PDF
+                            </button>
+                            <button class="sc-menu-item" @onclick="() => MenuExportReceipt(saved)">
+                                <span>🧾</span> Quittung
+                            </button>
+                            <div class="sc-menu-divider"></div>
+                            <button class="sc-menu-item sc-menu-item-danger" @onclick="() => MenuDelete(saved.Id)">
+                                <span>🗑️</span> Delete
+                            </button>
                         </div>
                     }
 
-                    <div class="saved-count-actions saved-count-actions-primary">
-                        <button class="btn-load" @onclick="() => LoadCount(saved)">Load</button>
-                        <button class="btn-secondary-action" @onclick="() => ToggleSignatureEditor(saved)">@(isSigning ? "Close Sign" : "Sign")</button>
-                        <button class="btn-secondary-action" @onclick="() => ExportPdfAsync(saved)">Export PDF</button>
-                    </div>
-                    <div class="saved-count-actions saved-count-actions-secondary">
-                        <button class="btn-delete-single" @onclick="() => DeleteCount(saved.Id)">Delete</button>
-                    </div>
+                </div>
+            }
+        </div>
+    }
 
-                    @if (isSigning)
+    <!-- ── Sign modal ── -->
+    @if (_panelType == "sign" && _panelCount != null)
+    {
+        <div class="sc-modal-backdrop" @onclick="ClosePanel">
+            <div class="sc-modal" @onclick:stopPropagation>
+                <div class="sc-modal-header">
+                    <div>
+                        <h3>Sign — @_panelCount.Name</h3>
+                        <p>Add a signature before exporting as PDF.</p>
+                    </div>
+                    <button class="sc-modal-close" @onclick="ClosePanel" aria-label="Close">✕</button>
+                </div>
+
+                <div class="sc-modal-body">
+                    @if (_signatureSaveState == SignatureSaveState.Saved)
                     {
-                        <div class="saved-signature-editor">
-                            <div class="saved-signature-editor-header">
-                                <div>
-                                    <h4>Signature</h4>
-                                    <p>Add a signature before exporting this count as PDF.</p>
-                                </div>
-                                @if (_signatureSaveState == SignatureSaveState.Saved)
-                                {
-                                    <span class="saved-signature-feedback success">Signature saved</span>
-                                }
-                                else if (_signatureSaveState == SignatureSaveState.Error)
-                                {
-                                    <span class="saved-signature-feedback error">Please add a name and a signature.</span>
-                                }
-                            </div>
+                        <div class="saved-signature-feedback success" style="margin-bottom:0.75rem">Signature saved</div>
+                    }
+                    else if (_signatureSaveState == SignatureSaveState.Error)
+                    {
+                        <div class="saved-signature-feedback error" style="margin-bottom:0.75rem">Please add a name and a signature.</div>
+                    }
 
-                            <div class="saved-signature-signer-label">Signer 1</div>
-                            <div class="saved-signature-mode-toggle">
-                                <button class="saved-signature-mode-btn @(_signatureMode == SignatureMode.Drawn ? "active" : null)" @onclick="() => SetSignatureMode(SignatureMode.Drawn)">Draw</button>
-                                <button class="saved-signature-mode-btn @(_signatureMode == SignatureMode.Typed ? "active" : null)" @onclick="() => SetSignatureMode(SignatureMode.Typed)">Type</button>
-                            </div>
+                    <!-- Signer tabs -->
+                    <div class="sig-tabs">
+                        <button class="sig-tab @(_activeSignerTab == 1 ? "active" : null)"
+                                @onclick="() => SetSignerTab(1)">
+                            Signer 1
+                            @if (!string.IsNullOrWhiteSpace(_signerName))
+                            {
+                                <span class="sig-tab-dot"></span>
+                            }
+                        </button>
+                        <button class="sig-tab @(_activeSignerTab == 2 ? "active" : null)"
+                                @onclick="() => SetSignerTab(2)">
+                            Signer 2
+                            @if (!string.IsNullOrWhiteSpace(_signerName2))
+                            {
+                                <span class="sig-tab-dot"></span>
+                            }
+                        </button>
+                    </div>
+
+                    <!-- Signer 1 panel -->
+                    @if (_activeSignerTab == 1)
+                    {
+                        <div class="sig-tab-panel">
                             <div class="saved-signature-form-grid">
                                 <div class="saved-signature-field">
                                     <label for="signature-name">Signer name</label>
                                     <input id="signature-name" class="saved-signature-input" @bind="_signerName" @bind:event="oninput" placeholder="Who signed this count?" />
                                 </div>
-                                <div class="saved-signature-field">
-                                    <label for="signature-typed">Typed signature</label>
-                                    <input id="signature-typed" class="saved-signature-input @(_signatureMode == SignatureMode.Typed ? "signature-font" : null)" @bind="_typedSignature" @bind:event="oninput" placeholder="Type signature text" disabled="@(_signatureMode != SignatureMode.Typed)" />
-                                </div>
                             </div>
-                            <div class="saved-signature-canvas-wrap @(_signatureMode == SignatureMode.Drawn ? null : "disabled")">
+                            <div class="saved-signature-canvas-wrap @(null)">
                                 <div class="saved-signature-canvas-header">
                                     <span>Draw signature</span>
-                                    <button class="btn-link-action" @onclick="() => ClearDrawnSignatureAsync(false)" disabled="@(_signatureMode != SignatureMode.Drawn)">Clear</button>
+                                    <button class="btn-link-action" @onclick="() => ClearDrawnSignatureAsync(false)" disabled="@(false)">Clear</button>
                                 </div>
                                 <canvas id="@_signatureCanvasId" class="saved-signature-canvas"></canvas>
                             </div>
+                        </div>
+                    }
 
-                            <div class="saved-signature-signer-divider"></div>
-
-                            <div class="saved-signature-signer-label">Signer 2</div>
-                            <div class="saved-signature-mode-toggle">
-                                <button class="saved-signature-mode-btn @(_signatureMode2 == SignatureMode.Drawn ? "active" : null)" @onclick="() => _signatureMode2 = SignatureMode.Drawn">Draw</button>
-                                <button class="saved-signature-mode-btn @(_signatureMode2 == SignatureMode.Typed ? "active" : null)" @onclick="() => _signatureMode2 = SignatureMode.Typed">Type</button>
-                            </div>
+                    <!-- Signer 2 panel -->
+                    @if (_activeSignerTab == 2)
+                    {
+                        <div class="sig-tab-panel">
                             <div class="saved-signature-form-grid">
                                 <div class="saved-signature-field">
                                     <label for="signature-name-2">Signer name</label>
                                     <input id="signature-name-2" class="saved-signature-input" @bind="_signerName2" @bind:event="oninput" placeholder="Second signer (optional)" />
                                 </div>
-                                <div class="saved-signature-field">
-                                    <label for="signature-typed-2">Typed signature</label>
-                                    <input id="signature-typed-2" class="saved-signature-input @(_signatureMode2 == SignatureMode.Typed ? "signature-font" : null)" @bind="_typedSignature2" @bind:event="oninput" placeholder="Type signature text" disabled="@(_signatureMode2 != SignatureMode.Typed)" />
-                                </div>
                             </div>
-                            <div class="saved-signature-canvas-wrap @(_signatureMode2 == SignatureMode.Drawn ? null : "disabled")">
+                            <div class="saved-signature-canvas-wrap @(null)">
                                 <div class="saved-signature-canvas-header">
                                     <span>Draw signature</span>
-                                    <button class="btn-link-action" @onclick="() => ClearDrawnSignatureAsync(true)" disabled="@(_signatureMode2 != SignatureMode.Drawn)">Clear</button>
+                                    <button class="btn-link-action" @onclick="() => ClearDrawnSignatureAsync(true)" disabled="@(false)">Clear</button>
                                 </div>
                                 <canvas id="@_signatureCanvasId2" class="saved-signature-canvas"></canvas>
-                            </div>
-
-                            <div class="saved-signature-editor-actions">
-                                <button class="btn-cancel" @onclick="CloseSignatureEditor">Cancel</button>
-                                <button class="btn-secondary-action" @onclick="() => RemoveSignatureAsync(saved)" disabled="@(!(saved.Signature?.HasAnySignature ?? false) && !HasWorkingSignature())">Remove Signature</button>
-                                <button class="btn-load" @onclick="() => SaveSignatureAsync(saved)">Save Signature</button>
                             </div>
                         </div>
                     }
                 </div>
-            }
+
+                <div class="sc-modal-footer">
+                    <button class="btn-cancel" @onclick="ClosePanel">Cancel</button>
+                    <button class="btn-secondary-action" @onclick="() => RemoveSignatureAsync(_panelCount)"
+                            disabled="@(!(_panelCount.Signature?.HasAnySignature ?? false) && !HasWorkingSignature())">
+                        Remove Signature
+                    </button>
+                    <button class="btn-load" @onclick="() => SaveSignatureAsync(_panelCount)">Save Signature</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- ── Book modal ── -->
+    @if (_panelType == "book" && _panelCount != null)
+    {
+        <div class="sc-modal-backdrop" @onclick="ClosePanel">
+            <div class="sc-modal sc-modal-sm" @onclick:stopPropagation>
+                <div class="sc-modal-header">
+                    <div>
+                        <h3>Book to Account Ledger</h3>
+                        <p>@_panelCount.CurrencySymbol @_panelCount.TotalAmount.ToString("N2") will be added as a transaction.</p>
+                    </div>
+                    <button class="sc-modal-close" @onclick="ClosePanel" aria-label="Close">✕</button>
+                </div>
+
+                <div class="sc-modal-body">
+                    @if (_ledger.Accounts.Count == 0)
+                    {
+                        <p class="booking-no-accounts">No accounts set up yet. Add an account in the Account Ledger first.</p>
+                    }
+                    else
+                    {
+                        <div class="booking-direction-toggle">
+                            <button class="booking-direction-btn @(_bookingDirection == CashFlowDirection.Incoming ? "active" : null)"
+                                    @onclick="() => _bookingDirection = CashFlowDirection.Incoming">↑ Incoming</button>
+                            <button class="booking-direction-btn @(_bookingDirection == CashFlowDirection.Outgoing ? "active" : null)"
+                                    @onclick="() => _bookingDirection = CashFlowDirection.Outgoing">↓ Outgoing</button>
+                        </div>
+                        <div class="booking-form">
+                            <div class="saved-signature-field">
+                                <label>Account</label>
+                                <select class="saved-signature-input" @bind="_bookingAccountId">
+                                    <option value="">— Select account —</option>
+                                    @foreach (var acc in _ledger.Accounts)
+                                    {
+                                        <option value="@acc.Id">@acc.Name</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="saved-signature-field">
+                                <label>Description</label>
+                                <input class="saved-signature-input" @bind="_bookingDescription" @bind:event="oninput" placeholder="Transaction description" />
+                            </div>
+                        </div>
+                        @if (_bookingError)
+                        {
+                            <span class="saved-signature-feedback error">Please select an account.</span>
+                        }
+                    }
+                </div>
+
+                <div class="sc-modal-footer">
+                    <button class="btn-cancel" @onclick="ClosePanel">Cancel</button>
+                    @if (_ledger.Accounts.Count > 0)
+                    {
+                        <button class="btn-load" @onclick="() => ConfirmBookingAsync(_panelCount)"
+                                disabled="@(string.IsNullOrEmpty(_bookingAccountId))">
+                            Confirm Booking
+                        </button>
+                    }
+                </div>
+            </div>
         </div>
     }
 </div>
@@ -207,27 +289,40 @@
 @code {
     private readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
     private readonly string _signatureCanvasId = "saved-count-signature-pad";
+    private readonly string _signatureCanvasId2 = "saved-count-signature-pad-2";
 
     private List<SavedCount> _savedCounts = new();
     private bool _isLoading = true;
     private bool _showConfirmClear = false;
     private bool _isPremium = false;
 
-    private string? _editingCountId;
+    private string? _menuOpenId;
+
+    private string? _panelType;
+    private SavedCount? _panelCount;
+    private string? _initializedCanvasForId;
+
+    private int _activeSignerTab = 1;
+
     private string _signerName = string.Empty;
     private string _typedSignature = string.Empty;
     private List<SignatureStroke> _drawnStrokes = new();
-    private SignatureMode _signatureMode = SignatureMode.Drawn;
     private string _signerName2 = string.Empty;
     private string _typedSignature2 = string.Empty;
     private List<SignatureStroke> _drawnStrokes2 = new();
-    private SignatureMode _signatureMode2 = SignatureMode.Drawn;
+
     private SignatureSaveState _signatureSaveState = SignatureSaveState.None;
-    private readonly string _signatureCanvasId2 = "saved-count-signature-pad-2";
+
+    private AccountLedger _ledger = new();
+    private CashFlowDirection _bookingDirection = CashFlowDirection.Incoming;
+    private string _bookingAccountId = string.Empty;
+    private string _bookingDescription = string.Empty;
+    private bool _bookingError = false;
 
     protected override async Task OnInitializedAsync()
     {
         _isPremium = await PremiumService.IsFeatureEnabledAsync(PremiumFeature.LoadCounts);
+        _ledger = await StorageService.GetAccountLedgerAsync();
         if (_isPremium)
             await LoadSavedCounts();
         else
@@ -236,10 +331,13 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!string.IsNullOrWhiteSpace(_editingCountId))
+        if (_panelType == "sign" && _panelCount != null && _panelCount.Id != _initializedCanvasForId)
         {
-            await JSRuntime.InvokeVoidAsync("cashCountSignature.init", _signatureCanvasId, JsonSerializer.Serialize(_drawnStrokes, _jsonOptions));
-            await JSRuntime.InvokeVoidAsync("cashCountSignature.init", _signatureCanvasId2, JsonSerializer.Serialize(_drawnStrokes2, _jsonOptions));
+            _initializedCanvasForId = _panelCount.Id;
+            if (_activeSignerTab == 1)
+                await JSRuntime.InvokeVoidAsync("cashCountSignature.init", _signatureCanvasId, JsonSerializer.Serialize(_drawnStrokes, _jsonOptions));
+            else
+                await JSRuntime.InvokeVoidAsync("cashCountSignature.init", _signatureCanvasId2, JsonSerializer.Serialize(_drawnStrokes2, _jsonOptions));
         }
 
         await base.OnAfterRenderAsync(firstRender);
@@ -253,84 +351,109 @@
         _isLoading = false;
     }
 
-    private void LoadCount(SavedCount saved)
+    // ── Kebab menu ────────────────────────────────────────────────────────────
+
+    private void ToggleCardMenu(string id)
     {
+        _menuOpenId = _menuOpenId == id ? null : id;
+    }
+
+    private void MenuLoad(SavedCount saved)
+    {
+        _menuOpenId = null;
         NavigationManager.NavigateTo($"/?load={saved.Id}");
     }
 
-    private async Task DeleteCount(string id)
+    private void MenuSign(SavedCount saved)
     {
-        await StorageService.DeleteCountAsync(id);
-        if (_editingCountId == id)
-        {
-            CloseSignatureEditor();
-        }
-        await LoadSavedCounts();
-    }
-
-    private void ConfirmClearAll()
-    {
-        _showConfirmClear = true;
-    }
-
-    private async Task ClearAllCounts()
-    {
-        await StorageService.ClearAllAsync();
-        _showConfirmClear = false;
-        CloseSignatureEditor();
-        await LoadSavedCounts();
-    }
-
-    private void ToggleSignatureEditor(SavedCount saved)
-    {
-        if (_editingCountId == saved.Id)
-        {
-            CloseSignatureEditor();
-            return;
-        }
-
-        _editingCountId = saved.Id;
+        _menuOpenId = null;
+        _panelType = "sign";
+        _panelCount = saved;
         _signerName = saved.Signature?.SignerName ?? string.Empty;
         _typedSignature = saved.Signature?.TypedSignature ?? string.Empty;
-        _drawnStrokes = saved.Signature?.DrawnStrokes?.Select(CloneStroke).ToList() ?? new List<SignatureStroke>();
-        _signatureMode = saved.Signature?.HasDrawnSignature == true ? SignatureMode.Drawn : saved.Signature?.Mode ?? SignatureMode.Drawn;
+        _drawnStrokes = saved.Signature?.DrawnStrokes?.Select(CloneStroke).ToList() ?? new();       
         _signerName2 = saved.SecondSignature?.SignerName ?? string.Empty;
         _typedSignature2 = saved.SecondSignature?.TypedSignature ?? string.Empty;
-        _drawnStrokes2 = saved.SecondSignature?.DrawnStrokes?.Select(CloneStroke).ToList() ?? new List<SignatureStroke>();
-        _signatureMode2 = saved.SecondSignature?.HasDrawnSignature == true ? SignatureMode.Drawn : saved.SecondSignature?.Mode ?? SignatureMode.Drawn;
+        _drawnStrokes2 = saved.SecondSignature?.DrawnStrokes?.Select(CloneStroke).ToList() ?? new();        
         _signatureSaveState = SignatureSaveState.None;
+        _activeSignerTab = 1;
     }
 
-    private void CloseSignatureEditor()
+    private void MenuBook(SavedCount saved)
     {
-        _editingCountId = null;
+        _menuOpenId = null;
+        _panelType = "book";
+        _panelCount = saved;
+        _bookingDirection = CashFlowDirection.Incoming;
+        _bookingAccountId = string.Empty;
+        _bookingDescription = saved.Name;
+        _bookingError = false;
+    }
+
+    private async Task MenuExportPdf(SavedCount saved)
+    {
+        _menuOpenId = null;
+        await CollectInProgressSignatureAsync(saved);
+        await SavedCountExportService.ExportAsync(saved);
+    }
+
+    private async Task MenuExportReceipt(SavedCount saved)
+    {
+        _menuOpenId = null;
+        await CollectInProgressSignatureAsync(saved);
+        await SavedCountReceiptService.ExportAsync(saved);
+    }
+
+    private async Task MenuDelete(string id)
+    {
+        _menuOpenId = null;
+        await StorageService.DeleteCountAsync(id);
+        if (_panelCount?.Id == id)
+            ClosePanel();
+        await LoadSavedCounts();
+    }
+
+    // ── Modal close ───────────────────────────────────────────────────────────
+
+    private void ClosePanel()
+    {
+        _panelType = null;
+        _panelCount = null;
+        _initializedCanvasForId = null;
         _signerName = string.Empty;
         _typedSignature = string.Empty;
-        _drawnStrokes = new List<SignatureStroke>();
-        _signatureMode = SignatureMode.Drawn;
+        _drawnStrokes = new();
         _signerName2 = string.Empty;
         _typedSignature2 = string.Empty;
-        _drawnStrokes2 = new List<SignatureStroke>();
-        _signatureMode2 = SignatureMode.Drawn;
+        _drawnStrokes2 = new();        
         _signatureSaveState = SignatureSaveState.None;
+        _activeSignerTab = 1;
     }
 
-    private void SetSignatureMode(SignatureMode mode)
+    // ── Signature ─────────────────────────────────────────────────────────────
+
+    private async Task SetSignerTab(int tab)
     {
-        _signatureMode = mode;
-        _signatureSaveState = SignatureSaveState.None;
+        // Capture drawn strokes from the canvas before switching away
+        if (_activeSignerTab == 1 )
+            _drawnStrokes = await GetCurrentDrawnSignatureAsync(second: false);
+        else if (_activeSignerTab == 2 )
+            _drawnStrokes2 = await GetCurrentDrawnSignatureAsync(second: true);
+
+        _activeSignerTab = tab;
+        // Force canvas re-init for the newly shown tab
+        _initializedCanvasForId = null;
     }
+
 
     private async Task SaveSignatureAsync(SavedCount saved)
     {
-        _signatureSaveState = SignatureSaveState.None;
-        if (_signatureMode == SignatureMode.Drawn)
-            _drawnStrokes = await GetCurrentDrawnSignatureAsync();
-        if (_signatureMode2 == SignatureMode.Drawn)
-            _drawnStrokes2 = await GetCurrentDrawnSignatureAsync(second: true);
+        _signatureSaveState = SignatureSaveState.None;        
+        _drawnStrokes = await GetCurrentDrawnSignatureAsync();       
+        _drawnStrokes2 = await GetCurrentDrawnSignatureAsync(second: true);
 
         var hasTyped = !string.IsNullOrWhiteSpace(_typedSignature);
-        var hasDrawn = _drawnStrokes.Any(stroke => stroke.Points.Count > 0);
+        var hasDrawn = _drawnStrokes.Any(s => s.Points.Count > 0);
         if (string.IsNullOrWhiteSpace(_signerName) || (!hasTyped && !hasDrawn))
         {
             _signatureSaveState = SignatureSaveState.Error;
@@ -340,21 +463,19 @@
         saved.Signature = new SavedCountSignature
         {
             SignerName = _signerName.Trim(),
-            TypedSignature = _typedSignature.Trim(),
-            Mode = _signatureMode,
+            TypedSignature = _typedSignature.Trim(),          
             SignedAt = DateTime.UtcNow,
             DrawnStrokes = _drawnStrokes.Select(CloneStroke).ToList()
         };
 
         var has2Typed = !string.IsNullOrWhiteSpace(_typedSignature2);
-        var has2Drawn = _drawnStrokes2.Any(stroke => stroke.Points.Count > 0);
+        var has2Drawn = _drawnStrokes2.Any(s => s.Points.Count > 0);
         if (!string.IsNullOrWhiteSpace(_signerName2) || has2Typed || has2Drawn)
         {
             saved.SecondSignature = new SavedCountSignature
             {
                 SignerName = _signerName2.Trim(),
-                TypedSignature = _typedSignature2.Trim(),
-                Mode = _signatureMode2,
+                TypedSignature = _typedSignature2.Trim(),                
                 SignedAt = DateTime.UtcNow,
                 DrawnStrokes = _drawnStrokes2.Select(CloneStroke).ToList()
             };
@@ -372,7 +493,7 @@
         await StorageService.SaveCountAsync(saved);
         await JSRuntime.InvokeVoidAsync("cashCountSignature.clear", _signatureCanvasId);
         await JSRuntime.InvokeVoidAsync("cashCountSignature.clear", _signatureCanvasId2);
-        ToggleSignatureEditor(saved);
+        ClosePanel();
         await LoadSavedCounts();
     }
 
@@ -392,64 +513,92 @@
         return JsonSerializer.Deserialize<List<SignatureStroke>>(json, _jsonOptions) ?? new List<SignatureStroke>();
     }
 
-    private async Task ExportPdfAsync(SavedCount saved)
-    {
-        if (_editingCountId == saved.Id)
-        {
-            if (_signatureMode == SignatureMode.Drawn)
-                _drawnStrokes = await GetCurrentDrawnSignatureAsync();
-            if (_signatureMode2 == SignatureMode.Drawn)
-                _drawnStrokes2 = await GetCurrentDrawnSignatureAsync(second: true);
-
-            if (_drawnStrokes.Any(s => s.Points.Count > 0) || !string.IsNullOrWhiteSpace(_typedSignature) || !string.IsNullOrWhiteSpace(_signerName))
-            {
-                saved.Signature = new SavedCountSignature
-                {
-                    SignerName = _signerName.Trim(),
-                    TypedSignature = _typedSignature.Trim(),
-                    Mode = _signatureMode,
-                    SignedAt = saved.Signature?.SignedAt ?? DateTime.UtcNow,
-                    DrawnStrokes = _drawnStrokes.Select(CloneStroke).ToList()
-                };
-            }
-
-            if (_drawnStrokes2.Any(s => s.Points.Count > 0) || !string.IsNullOrWhiteSpace(_typedSignature2) || !string.IsNullOrWhiteSpace(_signerName2))
-            {
-                saved.SecondSignature = new SavedCountSignature
-                {
-                    SignerName = _signerName2.Trim(),
-                    TypedSignature = _typedSignature2.Trim(),
-                    Mode = _signatureMode2,
-                    SignedAt = saved.SecondSignature?.SignedAt ?? DateTime.UtcNow,
-                    DrawnStrokes = _drawnStrokes2.Select(CloneStroke).ToList()
-                };
-            }
-
-            await StorageService.SaveCountAsync(saved);
-            await LoadSavedCounts();
-        }
-
-        await SavedCountExportService.ExportAsync(saved);
-    }
-
     private bool HasWorkingSignature()
         => !string.IsNullOrWhiteSpace(_signerName)
            || !string.IsNullOrWhiteSpace(_typedSignature)
-           || _drawnStrokes.Any(stroke => stroke.Points.Count > 0)
+           || _drawnStrokes.Any(s => s.Points.Count > 0)
            || !string.IsNullOrWhiteSpace(_signerName2)
            || !string.IsNullOrWhiteSpace(_typedSignature2)
-           || _drawnStrokes2.Any(stroke => stroke.Points.Count > 0);
+           || _drawnStrokes2.Any(s => s.Points.Count > 0);
 
-    private static SignatureStroke CloneStroke(SignatureStroke stroke)
-        => new()
+    // ── Booking ───────────────────────────────────────────────────────────────
+
+    private async Task ConfirmBookingAsync(SavedCount saved)
+    {
+        if (string.IsNullOrEmpty(_bookingAccountId))
         {
-            Points = stroke.Points.Select(point => new SignaturePoint { X = point.X, Y = point.Y }).ToList()
+            _bookingError = true;
+            return;
+        }
+
+        var transaction = new AccountTransaction
+        {
+            AccountId = _bookingAccountId,
+            Description = string.IsNullOrWhiteSpace(_bookingDescription) ? saved.Name : _bookingDescription.Trim(),
+            Amount = saved.TotalAmount,
+            Direction = _bookingDirection,
+            Date = saved.SavedAt.ToLocalTime().Date,
+            Category = "Cash Count"
         };
 
-    private enum SignatureSaveState
-    {
-        None,
-        Saved,
-        Error
+        _ledger.Transactions.Add(transaction);
+        await StorageService.SaveAccountLedgerAsync(_ledger);
+        saved.LedgerTransactionId = transaction.Id;
+        await StorageService.SaveCountAsync(saved);
+
+        ClosePanel();
+        await LoadSavedCounts();
     }
+
+    // ── Export helpers ────────────────────────────────────────────────────────
+
+    private async Task CollectInProgressSignatureAsync(SavedCount saved)
+    {
+        if (_panelType != "sign" || _panelCount?.Id != saved.Id) return;
+
+         _drawnStrokes = await GetCurrentDrawnSignatureAsync();
+         _drawnStrokes2 = await GetCurrentDrawnSignatureAsync(second: true);
+
+        if (_drawnStrokes.Any(s => s.Points.Count > 0) || !string.IsNullOrWhiteSpace(_typedSignature) || !string.IsNullOrWhiteSpace(_signerName))
+        {
+            saved.Signature = new SavedCountSignature
+            {
+                SignerName = _signerName.Trim(),
+                TypedSignature = _typedSignature.Trim(),              
+                SignedAt = saved.Signature?.SignedAt ?? DateTime.UtcNow,
+                DrawnStrokes = _drawnStrokes.Select(CloneStroke).ToList()
+            };
+        }
+
+        if (_drawnStrokes2.Any(s => s.Points.Count > 0) || !string.IsNullOrWhiteSpace(_typedSignature2) || !string.IsNullOrWhiteSpace(_signerName2))
+        {
+            saved.SecondSignature = new SavedCountSignature
+            {
+                SignerName = _signerName2.Trim(),
+                TypedSignature = _typedSignature2.Trim(),                
+                SignedAt = saved.SecondSignature?.SignedAt ?? DateTime.UtcNow,
+                DrawnStrokes = _drawnStrokes2.Select(CloneStroke).ToList()
+            };
+        }
+
+        await StorageService.SaveCountAsync(saved);
+        await LoadSavedCounts();
+    }
+
+    // ── List management ───────────────────────────────────────────────────────
+
+    private void ConfirmClearAll() => _showConfirmClear = true;
+
+    private async Task ClearAllCounts()
+    {
+        await StorageService.ClearAllAsync();
+        _showConfirmClear = false;
+        ClosePanel();
+        await LoadSavedCounts();
+    }
+
+    private static SignatureStroke CloneStroke(SignatureStroke stroke)
+        => new() { Points = stroke.Points.Select(p => new SignaturePoint { X = p.X, Y = p.Y }).ToList() };
+
+    private enum SignatureSaveState { None, Saved, Error }
 }

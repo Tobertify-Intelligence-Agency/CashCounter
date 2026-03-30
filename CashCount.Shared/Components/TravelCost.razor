@@ -47,32 +47,20 @@
                 <span class="tc-summary-label">@Text["travel.summary.expenses"]</span>
                 <span class="tc-summary-amount">@FormatAmount(_collection.TotalExpenses)</span>
             </div>
-            <div class="tc-summary-item balance positive tc-summary-item-neutral">
-                <span class="tc-summary-label">@Text["app.currency"]</span>
-                <span class="tc-summary-amount">@_collection.CurrencySymbol</span>
-            </div>
         </div>
     </section>
 
     <section class="tc-add-card tc-add-card-minimal">
-        <div class="tc-section-header-compact">
-            <div>
-                <h3 class="tc-section-title tc-section-title-plain">@Text.Format("travel.addButton", Text["travel.type.expense"])</h3>
-                <p>@Text["travel.empty.body"]</p>
-            </div>
-        </div>
         <div class="tc-form tc-form-compact">
             <div class="tc-form-grid-minimal">
-                <label class="tc-field-block">
-                    <span class="af-summary-label">@Text["travel.field.description"]</span>
+                <label class="tc-field-block">                    
                     <input class="tc-input tc-desc-input"
                            @bind="_newEntry.Description"
                            @bind:event="oninput"
                            placeholder="@Text["travel.field.descriptionPlaceholder"]" />
                 </label>
 
-                <label class="tc-field-block">
-                    <span class="af-summary-label">@Text["travel.field.amount"]</span>
+                <label class="tc-field-block">                    
                     <div class="tc-amount-wrap">
                         <span class="tc-currency-prefix">@_collection.CurrencySymbol</span>
                         <input class="tc-input tc-amount-input"
@@ -85,16 +73,14 @@
                     </div>
                 </label>
 
-                <label class="tc-field-block">
-                    <span class="af-summary-label">@Text["travel.field.category"]</span>
+                <label class="tc-field-block">                    
                     <input class="tc-input tc-category-input"
                            @bind="_newEntry.Category"
                            @bind:event="oninput"
                            placeholder="@Text["travel.field.categoryPlaceholder"]" />
                 </label>
 
-                <label class="tc-field-block">
-                    <span class="af-summary-label">@Text["travel.field.date"]</span>
+                <label class="tc-field-block">                    
                     <input class="tc-input tc-date-input"
                            type="date"
                            @bind="_newEntry.Date"
@@ -163,12 +149,6 @@
     @if (_canSave)
     {
         <section class="save-section tc-save-card">
-            <div class="tc-section-header-compact">
-                <div>
-                    <h3 class="tc-section-title tc-section-title-plain">@Text["travel.save.title"]</h3>
-                    <p>@Text["travel.save.body"]</p>
-                </div>
-            </div>
             <div class="save-input-group">
                 <input type="text"
                        @bind="_saveName"
@@ -198,6 +178,57 @@
 
     @if (_collection.Entries.Count > 0)
     {
+        @if (_collection.LedgerTransactionId != null)
+        {
+            <div class="booked-to-ledger">✓ Booked to Account Ledger</div>
+        }
+        else if (_showBookingPanel)
+        {
+            <div class="booking-panel">
+                <div class="booking-panel-header">
+                    <h4>Book to Account Ledger</h4>
+                    <p>@_collection.CurrencySymbol @_collection.TotalExpenses.ToString("N2") will be booked as outgoing.</p>
+                </div>
+                @if (_ledger.Accounts.Count == 0)
+                {
+                    <p class="booking-no-accounts">No accounts set up yet. Add an account in the Account Ledger first.</p>
+                }
+                else
+                {
+                    <div class="booking-form">
+                        <div class="saved-signature-field">
+                            <label>Account</label>
+                            <select class="saved-signature-input" @bind="_bookingAccountId">
+                                <option value="">— Select account —</option>
+                                @foreach (var acc in _ledger.Accounts)
+                                {
+                                    <option value="@acc.Id">@acc.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="saved-signature-field">
+                            <label>Description</label>
+                            <input class="saved-signature-input" @bind="_bookingDescription" @bind:event="oninput" placeholder="Transaction description" />
+                        </div>
+                    </div>
+                }
+                <div class="saved-signature-editor-actions">
+                    <button class="btn-cancel" @onclick="() => _showBookingPanel = false">Cancel</button>
+                    @if (_ledger.Accounts.Count > 0)
+                    {
+                        <button class="btn-load" @onclick="BookToLedgerAsync"
+                                disabled="@(string.IsNullOrEmpty(_bookingAccountId))">
+                            Confirm Booking
+                        </button>
+                    }
+                </div>
+            </div>
+        }
+        else
+        {
+            <button class="btn-book-ledger" @onclick="OpenBookingPanel">📒 Book to Account Ledger</button>
+        }
+
         <div class="tc-action-buttons">
             <button class="btn-clear" @onclick="ClearAll">@Text["travel.clearAll"]</button>
         </div>
@@ -213,6 +244,11 @@
     private string _saveName = string.Empty;
     private bool _showSaveSuccess;
 
+    private AccountLedger _ledger = new();
+    private bool _showBookingPanel;
+    private string _bookingAccountId = string.Empty;
+    private string _bookingDescription = string.Empty;
+
     private static readonly List<(string Symbol, string Label)> _currencies = new()
     {
         ("€", "€ EUR"),
@@ -227,6 +263,7 @@
     {
         Text.Changed += OnTextChanged;
         _canSave = await PremiumService.IsFeatureEnabledAsync(PremiumFeature.SaveCounts);
+        _ledger = await StorageService.GetAccountLedgerAsync();
 
         var canLoad = await PremiumService.IsFeatureEnabledAsync(PremiumFeature.LoadCounts);
         if (canLoad)
@@ -322,6 +359,36 @@
     {
         var number = Math.Abs(amount).ToString("N2", Text.CurrentCulture);
         return includeCurrencySymbol ? $"{_collection.CurrencySymbol} {number}" : number;
+    }
+
+    private void OpenBookingPanel()
+    {
+        _bookingAccountId = string.Empty;
+        _bookingDescription = string.IsNullOrWhiteSpace(_collection.Name) ? "Travel expenses" : _collection.Name;
+        _showBookingPanel = true;
+    }
+
+    private async Task BookToLedgerAsync()
+    {
+        if (string.IsNullOrEmpty(_bookingAccountId)) return;
+
+        var transaction = new AccountTransaction
+        {
+            AccountId = _bookingAccountId,
+            Description = string.IsNullOrWhiteSpace(_bookingDescription) ? _collection.Name : _bookingDescription.Trim(),
+            Amount = _collection.TotalExpenses,
+            Direction = CashFlowDirection.Outgoing,
+            Date = DateTime.Today,
+            Category = "Travel"
+        };
+
+        _ledger.Transactions.Add(transaction);
+        await StorageService.SaveAccountLedgerAsync(_ledger);
+
+        _collection.LedgerTransactionId = transaction.Id;
+        await StorageService.SaveTripAsync(_collection);
+
+        _showBookingPanel = false;
     }
 
     public void Dispose()

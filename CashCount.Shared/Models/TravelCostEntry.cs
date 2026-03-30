@@ -7,6 +7,7 @@ public class TravelCollection
     public string CurrencySymbol { get; set; } = "€";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public List<TravelCostEntry> Entries { get; set; } = new();
+    public string? LedgerTransactionId { get; set; }
 
     public decimal TotalIncome => Entries.Where(e => e.Type == EntryType.Income).Sum(e => e.Amount);
     public decimal TotalExpenses => Entries.Where(e => e.Type == EntryType.Expense).Sum(e => e.Amount);
