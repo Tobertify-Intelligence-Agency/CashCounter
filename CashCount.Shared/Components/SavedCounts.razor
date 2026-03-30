@@ -300,15 +300,13 @@
 
     private string? _panelType;
     private SavedCount? _panelCount;
-    private string? _initializedCanvasForId;
+    private string? _initializedCanvasKey;
 
     private int _activeSignerTab = 1;
 
     private string _signerName = string.Empty;
-    private string _typedSignature = string.Empty;
     private List<SignatureStroke> _drawnStrokes = new();
     private string _signerName2 = string.Empty;
-    private string _typedSignature2 = string.Empty;
     private List<SignatureStroke> _drawnStrokes2 = new();
 
     private SignatureSaveState _signatureSaveState = SignatureSaveState.None;
@@ -331,13 +329,17 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_panelType == "sign" && _panelCount != null && _panelCount.Id != _initializedCanvasForId)
+        if (_panelType == "sign" && _panelCount != null)
         {
-            _initializedCanvasForId = _panelCount.Id;
-            if (_activeSignerTab == 1)
-                await JSRuntime.InvokeVoidAsync("cashCountSignature.init", _signatureCanvasId, JsonSerializer.Serialize(_drawnStrokes, _jsonOptions));
-            else
-                await JSRuntime.InvokeVoidAsync("cashCountSignature.init", _signatureCanvasId2, JsonSerializer.Serialize(_drawnStrokes2, _jsonOptions));
+            var canvasKey = $"{_panelCount.Id}:{_activeSignerTab}";
+            if (canvasKey != _initializedCanvasKey)
+            {
+                _initializedCanvasKey = canvasKey;
+                if (_activeSignerTab == 1)
+                    await JSRuntime.InvokeVoidAsync("cashCountSignature.init", _signatureCanvasId, JsonSerializer.Serialize(_drawnStrokes, _jsonOptions));
+                else
+                    await JSRuntime.InvokeVoidAsync("cashCountSignature.init", _signatureCanvasId2, JsonSerializer.Serialize(_drawnStrokes2, _jsonOptions));
+            }
         }
 
         await base.OnAfterRenderAsync(firstRender);
@@ -350,8 +352,6 @@
         _savedCounts = _savedCounts.OrderByDescending(c => c.SavedAt).ToList();
         _isLoading = false;
     }
-
-    // ── Kebab menu ────────────────────────────────────────────────────────────
 
     private void ToggleCardMenu(string id)
     {
@@ -370,13 +370,12 @@
         _panelType = "sign";
         _panelCount = saved;
         _signerName = saved.Signature?.SignerName ?? string.Empty;
-        _typedSignature = saved.Signature?.TypedSignature ?? string.Empty;
-        _drawnStrokes = saved.Signature?.DrawnStrokes?.Select(CloneStroke).ToList() ?? new();       
+        _drawnStrokes = saved.Signature?.DrawnStrokes?.Select(CloneStroke).ToList() ?? new();
         _signerName2 = saved.SecondSignature?.SignerName ?? string.Empty;
-        _typedSignature2 = saved.SecondSignature?.TypedSignature ?? string.Empty;
-        _drawnStrokes2 = saved.SecondSignature?.DrawnStrokes?.Select(CloneStroke).ToList() ?? new();        
+        _drawnStrokes2 = saved.SecondSignature?.DrawnStrokes?.Select(CloneStroke).ToList() ?? new();
         _signatureSaveState = SignatureSaveState.None;
         _activeSignerTab = 1;
+        _initializedCanvasKey = null;
     }
 
     private void MenuBook(SavedCount saved)
@@ -413,48 +412,38 @@
         await LoadSavedCounts();
     }
 
-    // ── Modal close ───────────────────────────────────────────────────────────
-
     private void ClosePanel()
     {
         _panelType = null;
         _panelCount = null;
-        _initializedCanvasForId = null;
+        _initializedCanvasKey = null;
         _signerName = string.Empty;
-        _typedSignature = string.Empty;
         _drawnStrokes = new();
         _signerName2 = string.Empty;
-        _typedSignature2 = string.Empty;
-        _drawnStrokes2 = new();        
+        _drawnStrokes2 = new();
         _signatureSaveState = SignatureSaveState.None;
         _activeSignerTab = 1;
     }
 
-    // ── Signature ─────────────────────────────────────────────────────────────
-
     private async Task SetSignerTab(int tab)
     {
-        // Capture drawn strokes from the canvas before switching away
-        if (_activeSignerTab == 1 )
+        if (_activeSignerTab == 1)
             _drawnStrokes = await GetCurrentDrawnSignatureAsync(second: false);
-        else if (_activeSignerTab == 2 )
+        else if (_activeSignerTab == 2)
             _drawnStrokes2 = await GetCurrentDrawnSignatureAsync(second: true);
 
         _activeSignerTab = tab;
-        // Force canvas re-init for the newly shown tab
-        _initializedCanvasForId = null;
+        _initializedCanvasKey = null;
     }
-
 
     private async Task SaveSignatureAsync(SavedCount saved)
     {
-        _signatureSaveState = SignatureSaveState.None;        
-        _drawnStrokes = await GetCurrentDrawnSignatureAsync();       
+        _signatureSaveState = SignatureSaveState.None;
+        _drawnStrokes = await GetCurrentDrawnSignatureAsync();
         _drawnStrokes2 = await GetCurrentDrawnSignatureAsync(second: true);
 
-        var hasTyped = !string.IsNullOrWhiteSpace(_typedSignature);
         var hasDrawn = _drawnStrokes.Any(s => s.Points.Count > 0);
-        if (string.IsNullOrWhiteSpace(_signerName) || (!hasTyped && !hasDrawn))
+        if (string.IsNullOrWhiteSpace(_signerName) || !hasDrawn)
         {
             _signatureSaveState = SignatureSaveState.Error;
             return;
@@ -463,19 +452,16 @@
         saved.Signature = new SavedCountSignature
         {
             SignerName = _signerName.Trim(),
-            TypedSignature = _typedSignature.Trim(),          
             SignedAt = DateTime.UtcNow,
             DrawnStrokes = _drawnStrokes.Select(CloneStroke).ToList()
         };
 
-        var has2Typed = !string.IsNullOrWhiteSpace(_typedSignature2);
         var has2Drawn = _drawnStrokes2.Any(s => s.Points.Count > 0);
-        if (!string.IsNullOrWhiteSpace(_signerName2) || has2Typed || has2Drawn)
+        if (!string.IsNullOrWhiteSpace(_signerName2) || has2Drawn)
         {
             saved.SecondSignature = new SavedCountSignature
             {
                 SignerName = _signerName2.Trim(),
-                TypedSignature = _typedSignature2.Trim(),                
                 SignedAt = DateTime.UtcNow,
                 DrawnStrokes = _drawnStrokes2.Select(CloneStroke).ToList()
             };
@@ -499,8 +485,16 @@
 
     private async Task ClearDrawnSignatureAsync(bool second = false)
     {
-        if (second) { _drawnStrokes2.Clear(); await JSRuntime.InvokeVoidAsync("cashCountSignature.clear", _signatureCanvasId2); }
-        else { _drawnStrokes.Clear(); await JSRuntime.InvokeVoidAsync("cashCountSignature.clear", _signatureCanvasId); }
+        if (second)
+        {
+            _drawnStrokes2.Clear();
+            await JSRuntime.InvokeVoidAsync("cashCountSignature.clear", _signatureCanvasId2);
+        }
+        else
+        {
+            _drawnStrokes.Clear();
+            await JSRuntime.InvokeVoidAsync("cashCountSignature.clear", _signatureCanvasId);
+        }
         _signatureSaveState = SignatureSaveState.None;
     }
 
@@ -515,13 +509,9 @@
 
     private bool HasWorkingSignature()
         => !string.IsNullOrWhiteSpace(_signerName)
-           || !string.IsNullOrWhiteSpace(_typedSignature)
            || _drawnStrokes.Any(s => s.Points.Count > 0)
            || !string.IsNullOrWhiteSpace(_signerName2)
-           || !string.IsNullOrWhiteSpace(_typedSignature2)
            || _drawnStrokes2.Any(s => s.Points.Count > 0);
-
-    // ── Booking ───────────────────────────────────────────────────────────────
 
     private async Task ConfirmBookingAsync(SavedCount saved)
     {
@@ -550,32 +540,28 @@
         await LoadSavedCounts();
     }
 
-    // ── Export helpers ────────────────────────────────────────────────────────
-
     private async Task CollectInProgressSignatureAsync(SavedCount saved)
     {
         if (_panelType != "sign" || _panelCount?.Id != saved.Id) return;
 
-         _drawnStrokes = await GetCurrentDrawnSignatureAsync();
-         _drawnStrokes2 = await GetCurrentDrawnSignatureAsync(second: true);
+        _drawnStrokes = await GetCurrentDrawnSignatureAsync();
+        _drawnStrokes2 = await GetCurrentDrawnSignatureAsync(second: true);
 
-        if (_drawnStrokes.Any(s => s.Points.Count > 0) || !string.IsNullOrWhiteSpace(_typedSignature) || !string.IsNullOrWhiteSpace(_signerName))
+        if (_drawnStrokes.Any(s => s.Points.Count > 0) || !string.IsNullOrWhiteSpace(_signerName))
         {
             saved.Signature = new SavedCountSignature
             {
                 SignerName = _signerName.Trim(),
-                TypedSignature = _typedSignature.Trim(),              
                 SignedAt = saved.Signature?.SignedAt ?? DateTime.UtcNow,
                 DrawnStrokes = _drawnStrokes.Select(CloneStroke).ToList()
             };
         }
 
-        if (_drawnStrokes2.Any(s => s.Points.Count > 0) || !string.IsNullOrWhiteSpace(_typedSignature2) || !string.IsNullOrWhiteSpace(_signerName2))
+        if (_drawnStrokes2.Any(s => s.Points.Count > 0) || !string.IsNullOrWhiteSpace(_signerName2))
         {
             saved.SecondSignature = new SavedCountSignature
             {
                 SignerName = _signerName2.Trim(),
-                TypedSignature = _typedSignature2.Trim(),                
                 SignedAt = saved.SecondSignature?.SignedAt ?? DateTime.UtcNow,
                 DrawnStrokes = _drawnStrokes2.Select(CloneStroke).ToList()
             };
@@ -584,8 +570,6 @@
         await StorageService.SaveCountAsync(saved);
         await LoadSavedCounts();
     }
-
-    // ── List management ───────────────────────────────────────────────────────
 
     private void ConfirmClearAll() => _showConfirmClear = true;
 
