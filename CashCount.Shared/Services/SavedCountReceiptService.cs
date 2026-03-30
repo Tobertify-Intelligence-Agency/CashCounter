@@ -1,30 +1,34 @@
 using System.Globalization;
 using System.Text;
 using CashCount.Shared.Models;
+using CashCount.Shared.Services.Localization;
 
 namespace CashCount.Shared.Services;
 
 public class SavedCountReceiptService
 {
     private readonly IFileExportService _fileExportService;
+    private readonly IAppTextService _text;
 
-    public SavedCountReceiptService(IFileExportService fileExportService)
+    public SavedCountReceiptService(IFileExportService fileExportService, IAppTextService text)
     {
         _fileExportService = fileExportService;
+        _text = text;
     }
 
     public async Task ExportAsync(SavedCount savedCount)
     {
         ArgumentNullException.ThrowIfNull(savedCount);
-        var fileName = BuildFileName(savedCount);
+        var fileName = BuildFileName(savedCount, _text.CurrentCulture);
         var content = GenerateReceiptPdf(savedCount);
         await _fileExportService.ExportPdfAsync(fileName, content);
     }
 
-    public static string BuildFileName(SavedCount savedCount)
+    public static string BuildFileName(SavedCount savedCount, CultureInfo? culture = null)
     {
         var ts = savedCount.SavedAt.ToString("yyyyMMdd-HHmm", CultureInfo.InvariantCulture);
-        return $"quittung-{ts}.pdf";
+        var prefix = (culture ?? CultureInfo.InvariantCulture).TwoLetterISOLanguageName.Equals("de", StringComparison.OrdinalIgnoreCase) ? "quittung" : "receipt";
+        return $"{prefix}-{ts}.pdf";
     }
 
     public static byte[] GenerateReceiptPdf(SavedCount savedCount)
@@ -38,7 +42,9 @@ public class SavedCountReceiptService
 
         var rawSymbol = Sanitize(savedCount.CurrencySymbol);
         var safeSymbol = rawSymbol.Contains('?') ? savedCount.CurrencyCode : rawSymbol;
-        string Money(decimal amount) => $"{safeSymbol} {amount.ToString("N2", CultureInfo.InvariantCulture)}";
+        string Money(decimal amount) => $"{safeSymbol} {amount.ToString("N2", _text.CurrentCulture)}";
+        string T(string key) => _text[key];
+        var isGerman = _text.CurrentCulture.TwoLetterISOLanguageName.Equals("de", StringComparison.OrdinalIgnoreCase);
 
         var pages = new List<StringBuilder>();
         var page = new StringBuilder();
@@ -92,12 +98,12 @@ public class SavedCountReceiptService
             y = pageHeight - 50f;
         }
 
-        var dateStr = savedCount.SavedAt.ToLocalTime().ToString("dd.MM.yyyy", CultureInfo.InvariantCulture);
+        var dateStr = savedCount.SavedAt.ToLocalTime().ToString("d", _text.CurrentCulture);
         var receiptNo = $"{savedCount.SavedAt.ToLocalTime():yyyyMMdd}-{savedCount.Id[..4].ToUpperInvariant()}";
-        var countName = string.IsNullOrWhiteSpace(savedCount.Name) ? "Kassenabrechnung" : savedCount.Name.Trim();
+        var countName = string.IsNullOrWhiteSpace(savedCount.Name) ? T("receipt.fallbackName") : savedCount.Name.Trim();
 
         // ── 1. HEADER ────────────────────────────────────────────────────────
-        WriteTextCentered("QUITTUNG", y, 26f, true);
+        WriteTextCentered(T("receipt.title"), y, 26f, true);
         y -= 14f;
         WriteTextCentered(countName, y, 11f);
         y -= 8f;
@@ -105,8 +111,8 @@ public class SavedCountReceiptService
         y -= 16f;
 
         // ── 2. DATE / RECEIPT NO ─────────────────────────────────────────────
-        WriteText($"Datum: {dateStr}", left, 10f);
-        WriteTextAt($"Belegnummer: {receiptNo}", right - 140f, y, 10f);
+        WriteText($"{T("receipt.date")}: {dateStr}", left, 10f);
+        WriteTextAt($"{T("receipt.number")}: {receiptNo}", right - 160f, y, 10f);
         y -= 20f;
 
         // ── 3. AMOUNT BOX ────────────────────────────────────────────────────
@@ -115,7 +121,7 @@ public class SavedCountReceiptService
         var boxBot = boxTop - boxH;
         Rect(left, boxBot, contentWidth, boxH, 1f, fill: true);
 
-        WriteTextAt("Betrag erhalten:", left + 14f, boxTop - 16f, 10f);
+        WriteTextAt(T("receipt.amountReceived"), left + 14f, boxTop - 16f, 10f);
         var amountText = Money(savedCount.TotalAmount);
         // Place amount near center-right
         var approxAmountWidth = amountText.Length * 14f * 0.5f;
@@ -124,22 +130,22 @@ public class SavedCountReceiptService
 
         // ── 4. AMOUNT IN WORDS ───────────────────────────────────────────────
         EnsureSpace(20f);
-        var words = AmountInWords(savedCount.TotalAmount);
-        WriteText("In Worten:", left, 9f, true);
+        var words = isGerman ? AmountInWords(savedCount.TotalAmount) : AmountInWordsEnglish(savedCount.TotalAmount);
+        WriteText(T("receipt.inWords"), left, 9f, true);
         WriteTextAt(words, left + 65f, y, 9f);
         y -= 16f;
 
         // ── 5. PAYMENT METHOD ────────────────────────────────────────────────
         EnsureSpace(16f);
-        WriteText("Zahlungsart:", left, 9f, true);
-        WriteTextAt("Bargeld", left + 65f, y, 9f);
+        WriteText(T("receipt.paymentMethod"), left, 9f, true);
+        WriteTextAt(T("receipt.cash"), left + 65f, y, 9f);
         y -= 14f;
         HRule(y);
         y -= 14f;
 
         // ── 6. DENOMINATION TABLE ────────────────────────────────────────────
         EnsureSpace(20f);
-        WriteText("Aufschlüsselung:", left, 10f, true);
+        WriteText(T("receipt.breakdown"), left, 10f, true);
         y -= 14f;
 
         const float rowTop = 11f;
@@ -170,14 +176,14 @@ public class SavedCountReceiptService
 
         if (banknotes.Count > 0 || coins.Count > 0)
         {
-            WriteSection("Scheine", banknotes);
-            WriteSection("Münzen", coins);
+            WriteSection(T("receipt.banknotes"), banknotes);
+            WriteSection(T("receipt.coins"), coins);
         }
         else
         {
             EnsureSpace(rowTop + rowBot);
             y -= rowTop;
-            WriteText("Keine Einzelstückelungen erfasst.", left + 12f, 9f);
+            WriteText(T("receipt.noDenominations"), left + 12f, 9f);
             y -= rowBot;
         }
 
@@ -185,7 +191,7 @@ public class SavedCountReceiptService
         EnsureSpace(rowTop + rowBot + 4f);
         HRule(y, left, right, 0.75f);
         y -= rowTop;
-        WriteText("Gesamt:", left, 10f, true);
+        WriteText(T("receipt.total"), left, 10f, true);
         WriteTextAt(Money(savedCount.TotalAmount), right - 90f, y, 10f, true);
         y -= rowBot;
         HRule(y, left, right, 1f);
@@ -193,7 +199,7 @@ public class SavedCountReceiptService
 
         // ── 8. SIGNATURES ────────────────────────────────────────────────────
         EnsureSpace(16f);
-        WriteText("Unterschriften:", left, 10f, true);
+        WriteText(T("receipt.signatures"), left, 10f, true);
         y -= 6f;
         HRule(y, left, right, 0.75f);
         y -= 8f;
@@ -209,10 +215,10 @@ public class SavedCountReceiptService
 
             if (sig.HasAnySignature)
             {
-                var signer = string.IsNullOrWhiteSpace(sig.SignerName) ? "Unterzeichner" : sig.SignerName.Trim();
+                var signer = string.IsNullOrWhiteSpace(sig.SignerName) ? T("receipt.signer") : sig.SignerName.Trim();
                 var signedOn = sig.SignedAt.HasValue
                     ? sig.SignedAt.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture)
-                    : "Unterzeichnet";
+                    : T("receipt.signed");
                 WriteTextAt(signer, left + 10f, bBot + sigBoxH - 16f, 10f, true);
                 WriteTextAt(signedOn, left + 10f, bBot + sigBoxH - 28f, 8.5f);
             }
@@ -240,8 +246,8 @@ public class SavedCountReceiptService
             y = bBot - 10f;
         }
 
-        RenderSigBox(savedCount.Signature ?? new SavedCountSignature(), "Unterzeichner 1 — nicht unterschrieben");
-        RenderSigBox(savedCount.SecondSignature ?? new SavedCountSignature(), "Unterzeichner 2 — nicht unterschrieben");
+        RenderSigBox(savedCount.Signature ?? new SavedCountSignature(), T("receipt.signer1Unsigned"));
+        RenderSigBox(savedCount.SecondSignature ?? new SavedCountSignature(), T("receipt.signer2Unsigned"));
 
         // ── 9. FOOTER ────────────────────────────────────────────────────────
         var footerTs = savedCount.SavedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture);
@@ -251,7 +257,7 @@ public class SavedCountReceiptService
             pg.AppendLine($"0.4 w {Fmt(left)} 34 m {Fmt(right)} 34 l S");
             pg.AppendLine("0 0 0 RG");
             pg.AppendLine("0.5 0.5 0.5 rg");
-            pg.AppendLine($"BT /F1 7.5 Tf 1 0 0 1 {Fmt(left)} 22 Tm (Erstellt mit CashCount) Tj ET");
+            pg.AppendLine($"BT /F1 7.5 Tf 1 0 0 1 {Fmt(left)} 22 Tm ({EscapePdfText(Sanitize(T("receipt.generatedWith")))}) Tj ET");
             pg.AppendLine($"BT /F1 7.5 Tf 1 0 0 1 {Fmt(right - 80f)} 22 Tm ({EscapePdfText(Sanitize(footerTs))}) Tj ET");
             pg.AppendLine("0 0 0 rg");
         }
@@ -313,6 +319,57 @@ public class SavedCountReceiptService
         var restM = n % 1_000_000;
         var millionStr = m == 1 ? "eine Million" : IntegerToGerman(m) + " Millionen";
         return millionStr + (restM == 0 ? "" : " " + IntegerToGerman(restM));
+    }
+
+    private static string AmountInWordsEnglish(decimal amount)
+    {
+        var units = (long)Math.Floor(amount);
+        var cents = (int)Math.Round((amount - units) * 100);
+        var result = IntegerToEnglish(units) + (units == 1 ? " dollar" : " dollars");
+        if (cents > 0)
+            result += " and " + IntegerToEnglish(cents) + (cents == 1 ? " cent" : " cents");
+        if (result.Length == 0) return "Zero dollars";
+        return char.ToUpperInvariant(result[0]) + result[1..];
+    }
+
+    private static readonly string[] OnesEn =
+    {
+        "", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+        "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen",
+        "seventeen", "eighteen", "nineteen"
+    };
+
+    private static readonly string[] TensEn =
+    {
+        "", "ten", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"
+    };
+
+    private static string IntegerToEnglish(long n)
+    {
+        if (n == 0) return "zero";
+        if (n < 0) return "minus " + IntegerToEnglish(-n);
+        if (n < 20) return OnesEn[n];
+        if (n < 100)
+        {
+            var t = (int)(n / 10);
+            var o = (int)(n % 10);
+            return o == 0 ? TensEn[t] : TensEn[t] + "-" + OnesEn[o];
+        }
+        if (n < 1000)
+        {
+            var h = (int)(n / 100);
+            var rest = n % 100;
+            return OnesEn[h] + " hundred" + (rest == 0 ? "" : " " + IntegerToEnglish(rest));
+        }
+        if (n < 1_000_000)
+        {
+            var k = n / 1000;
+            var rest = n % 1000;
+            return IntegerToEnglish(k) + " thousand" + (rest == 0 ? "" : " " + IntegerToEnglish(rest));
+        }
+        var m = n / 1_000_000;
+        var restM = n % 1_000_000;
+        return IntegerToEnglish(m) + (m == 1 ? " million" : " million") + (restM == 0 ? "" : " " + IntegerToEnglish(restM));
     }
 
     // ── Shared PDF helpers ────────────────────────────────────────────────────
