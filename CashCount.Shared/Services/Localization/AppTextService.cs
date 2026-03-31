@@ -627,5 +627,4 @@ public sealed class AppTextService : IAppTextService
         CultureInfo.DefaultThreadCurrentUICulture = culture;
     }
 }
-}
-}
+

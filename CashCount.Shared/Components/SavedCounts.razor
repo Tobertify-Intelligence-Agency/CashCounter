@@ -69,7 +69,7 @@
 
     @if (IsSignPanelOpen)
     {
-        <SavedCountSignModal PanelCount="@_panelCount!"
+        <SavedCountSignModal PanelCount="@(_panelCount!)"
                              ActiveSignerTab="@_activeSignerTab"
                              SetSignerTab="SetSignerTab"
                              SignerName="@_signerName"
@@ -89,7 +89,7 @@
 
     @if (IsBookPanelOpen)
     {
-        <SavedCountBookModal PanelCount="@_panelCount!"
+        <SavedCountBookModal PanelCount="@(_panelCount!)"
                              Ledger="@_ledger"
                              BookingDirection="@_bookingDirection"
                              BookingDirectionChanged="OnBookingDirectionChanged"

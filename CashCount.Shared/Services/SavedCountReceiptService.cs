@@ -20,7 +20,7 @@ public class SavedCountReceiptService
     {
         ArgumentNullException.ThrowIfNull(savedCount);
         var fileName = BuildFileName(savedCount, _text.CurrentCulture);
-        var content = GenerateReceiptPdf(savedCount);
+        var content = GenerateReceiptPdf(savedCount, _text);
         await _fileExportService.ExportPdfAsync(fileName, content);
     }
 
@@ -31,7 +31,7 @@ public class SavedCountReceiptService
         return $"{prefix}-{ts}.pdf";
     }
 
-    public static byte[] GenerateReceiptPdf(SavedCount savedCount)
+    public static byte[] GenerateReceiptPdf(SavedCount savedCount, IAppTextService text)
     {
         const float pageHeight = 842f;
         const float left = 60f;
@@ -42,9 +42,9 @@ public class SavedCountReceiptService
 
         var rawSymbol = Sanitize(savedCount.CurrencySymbol);
         var safeSymbol = rawSymbol.Contains('?') ? savedCount.CurrencyCode : rawSymbol;
-        string Money(decimal amount) => $"{safeSymbol} {amount.ToString("N2", _text.CurrentCulture)}";
-        string T(string key) => _text[key];
-        var isGerman = _text.CurrentCulture.TwoLetterISOLanguageName.Equals("de", StringComparison.OrdinalIgnoreCase);
+        string Money(decimal amount) => $"{safeSymbol} {amount.ToString("N2", text.CurrentCulture)}";
+        string T(string key) => text[key];
+        var isGerman = text.CurrentCulture.TwoLetterISOLanguageName.Equals("de", StringComparison.OrdinalIgnoreCase);
 
         var pages = new List<StringBuilder>();
         var page = new StringBuilder();
@@ -98,7 +98,7 @@ public class SavedCountReceiptService
             y = pageHeight - 50f;
         }
 
-        var dateStr = savedCount.SavedAt.ToLocalTime().ToString("d", _text.CurrentCulture);
+        var dateStr = savedCount.SavedAt.ToLocalTime().ToString("d", text.CurrentCulture);
         var receiptNo = $"{savedCount.SavedAt.ToLocalTime():yyyyMMdd}-{savedCount.Id[..4].ToUpperInvariant()}";
         var countName = string.IsNullOrWhiteSpace(savedCount.Name) ? T("receipt.fallbackName") : savedCount.Name.Trim();
 
