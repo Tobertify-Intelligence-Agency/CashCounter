@@ -27,11 +27,20 @@
 
     <!-- Android Release Signing -->
     <PropertyGroup Condition="$(TargetFramework.Contains('-android')) and '$(Configuration)' == 'Release'">
+        <!--
+            Signing secrets are injected from environment variables at build time.
+            NEVER hard-code the keystore password here (it lands in git history).
+            Set these before a Release build, e.g.:
+                Windows (PowerShell):  $env:CASHCOUNT_KEYSTORE_PASS = "..."
+                Linux/macOS:           export CASHCOUNT_KEYSTORE_PASS="..."
+            In CI, provide CASHCOUNT_KEYSTORE_PASS as a masked secret.
+            MSBuild reads environment variables as properties automatically.
+        -->
         <AndroidKeyStore>True</AndroidKeyStore>
         <AndroidSigningKeyStore>..\cashcount.keystore</AndroidSigningKeyStore>
         <AndroidSigningKeyAlias>cashcount</AndroidSigningKeyAlias>
-        <AndroidSigningKeyPass>CashCountLemon3.</AndroidSigningKeyPass>
-        <AndroidSigningStorePass>CashCountLemon3.</AndroidSigningStorePass>
+        <AndroidSigningKeyPass>$(CASHCOUNT_KEYSTORE_PASS)</AndroidSigningKeyPass>
+        <AndroidSigningStorePass>$(CASHCOUNT_KEYSTORE_PASS)</AndroidSigningStorePass>
 
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
@@ -93,5 +102,16 @@
     <ItemGroup>
       <ProjectReference Include="..\CashCount.Shared\CashCount.Shared.csproj" />
     </ItemGroup>
+
+    <!--
+        Fail fast on a Release Android build if the signing password was not provided,
+        instead of failing later with a confusing keystore error.
+    -->
+    <Target Name="EnsureKeystorePassword"
+            BeforeTargets="Build"
+            Condition="$(TargetFramework.Contains('-android')) and '$(Configuration)' == 'Release'">
+        <Error Condition="'$(CASHCOUNT_KEYSTORE_PASS)' == ''"
+               Text="Release signing requires the CASHCOUNT_KEYSTORE_PASS environment variable. Set it before building (see the Android Release Signing comment in this .csproj)." />
+    </Target>
 
 </Project>
