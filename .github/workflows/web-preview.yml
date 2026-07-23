@@ -1,0 +1,74 @@
+name: Web Preview (GitHub Pages)
+
+# Builds the Blazor WebAssembly app (CashCount.Web) and publishes it to
+# GitHub Pages on every push to main. Gives a live URL you can open on your
+# phone within ~1-2 minutes of a change:
+#
+#   https://tobertify-intelligence-agency.github.io/CashCounter/
+#
+# One-time setup: repo Settings -> Pages -> "Build and deployment" ->
+# Source: "GitHub Actions".
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+# Allow this workflow to publish to GitHub Pages.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one Pages deploy at a time; newer pushes cancel in-progress runs.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Publish Blazor WebAssembly
+        run: dotnet publish CashCount.Web/CashCount.Web.csproj -c Release -o build_output
+
+      - name: Prepare output for GitHub Pages
+        run: |
+          set -e
+          WWWROOT="build_output/wwwroot"
+
+          # Project pages are served from a sub-path, so the base href must
+          # point at /CashCounter/ instead of /.
+          sed -i 's|<base href="/" />|<base href="/CashCounter/" />|g' "$WWWROOT/index.html"
+
+          # Jekyll (GitHub Pages' default) ignores folders starting with "_",
+          # which would drop Blazor's _framework directory. Disable Jekyll.
+          touch "$WWWROOT/.nojekyll"
+
+          # SPA fallback: serve the app for deep links / refreshes on client
+          # routes (e.g. /saved, /travel-cost) that have no static file.
+          cp "$WWWROOT/index.html" "$WWWROOT/404.html"
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build_output/wwwroot
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
