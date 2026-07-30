@@ -87,10 +87,12 @@ jobs:
         run: |
           set -e
           mkdir -p artifacts
-          # The signed bundle is emitted as <package-id>-Signed.aab
-          found=$(find CashCount.Maui/bin/Release -name '*-Signed.aab' -o -name '*.aab' | head -n1)
+          echo "All .aab files produced:"
+          find CashCount.Maui/bin/Release -name '*.aab' -print
+          # Prefer the signed bundle (<package-id>-Signed.aab).
+          found=$(find CashCount.Maui/bin/Release -name '*-Signed.aab' | head -n1)
           if [ -z "$found" ]; then
-            echo "::error::No .aab produced — check the publish step output."
+            echo "::error::No *-Signed.aab found — signing did not run. See the file list above."
             exit 1
           fi
           cp "$found" artifacts/
