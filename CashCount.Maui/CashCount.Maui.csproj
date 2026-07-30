@@ -1,8 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
     <PropertyGroup>
-        <TargetFrameworks>net10.0-android;net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
-        <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
+        <!-- Pass -p:AndroidOnly=true to build only the Android head (CI on Linux,
+             where iOS/macCatalyst workload packs are unavailable). Read only here;
+             CashCount.Shared keeps its own net10.0, so it does not leak. -->
+        <TargetFrameworks Condition="'$(AndroidOnly)' == 'true'">net10.0-android</TargetFrameworks>
+        <TargetFrameworks Condition="'$(AndroidOnly)' != 'true'">net10.0-android;net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
+        <TargetFrameworks Condition="'$(AndroidOnly)' != 'true' and $([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
 
         <OutputType>Exe</OutputType>
         <RootNamespace>CashCount</RootNamespace>
