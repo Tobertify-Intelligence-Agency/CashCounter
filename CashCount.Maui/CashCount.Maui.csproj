@@ -87,8 +87,10 @@
         <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="$(MauiVersion)" />
         <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
         <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="10.0.0" />
-        <!-- In-App Billing -->
-        <PackageReference Include="Plugin.InAppBilling" Version="8.0.4" />
+        <!-- In-App Billing.
+             v10 uses native Google Play Billing Library 8, required by Google
+             Play from 2026-08-31. (v8 = Billing 6.2.1, v9 = Billing 7.) -->
+        <PackageReference Include="Plugin.InAppBilling" Version="10.0.0" />
     </ItemGroup>
 
     <!-- Firebase packages for Android only (iOS builds happen on Mac) -->
