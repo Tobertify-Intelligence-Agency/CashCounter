@@ -62,10 +62,11 @@ jobs:
           echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "${GITHUB_WORKSPACE}/cashcount.keystore"
 
       - name: Restore
-        # Constrain to the Android TFM only. On a Linux runner the iOS/macCatalyst
-        # workload packs are absent, and restore would otherwise walk every TFM
-        # in the csproj and fail with NETSDK1178.
-        run: dotnet restore CashCount.Maui/CashCount.Maui.csproj -p:TargetFrameworks=net10.0-android
+        # Build only the Android head. On a Linux runner the iOS/macCatalyst
+        # workload packs are absent, so restoring every TFM fails (NETSDK1178).
+        # AndroidOnly is read only by CashCount.Maui.csproj, so referenced
+        # projects (CashCount.Shared -> net10.0) are unaffected.
+        run: dotnet restore CashCount.Maui/CashCount.Maui.csproj -p:AndroidOnly=true
 
       - name: Publish signed AAB (Release, API 36)
         env:
@@ -78,7 +79,7 @@ jobs:
           dotnet publish CashCount.Maui/CashCount.Maui.csproj \
             -c Release \
             -f net10.0-android \
-            -p:TargetFrameworks=net10.0-android \
+            -p:AndroidOnly=true \
             -p:AndroidSigningKeyStore="${GITHUB_WORKSPACE}/cashcount.keystore" \
             -p:AndroidPackageFormat=aab
 
