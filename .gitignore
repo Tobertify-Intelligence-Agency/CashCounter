@@ -426,3 +426,8 @@ FodyWeavers.xsd
 
 # Claude local machine settings
 .claude/settings.local.json
+
+# Google Cloud service account key — NEVER commit (added for CI/Play deployment)
+cashcounter-*.json
+*serviceaccount*.json
+service-account*.json
