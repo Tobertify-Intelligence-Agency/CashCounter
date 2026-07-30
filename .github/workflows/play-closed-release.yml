@@ -1,8 +1,9 @@
-name: Play Internal Release
+name: Play Closed Testing Release
 
 # Builds a signed Android App Bundle (API 36 / Android 16) and uploads it to
-# the Google Play "Internal testing" track. Internal testing skips full review,
-# so testers get the update through the Play Store app within minutes.
+# the Google Play "Closed testing" track (API track name: alpha).
+# The closed track must already exist in Play Console and have a tester list,
+# otherwise the upload is rejected.
 #
 # Trigger: push a version tag (e.g. v1.0.6) or run manually (Actions -> Run workflow).
 #
@@ -115,11 +116,13 @@ jobs:
           echo "path=$found" >> "$GITHUB_OUTPUT"
           echo "Selected signed AAB: $found"
 
-      - name: Upload to Play Internal testing
+      - name: Upload to Play Closed testing (alpha)
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.tobertify.cashcounter
           releaseFiles: ${{ steps.aab.outputs.path }}
-          tracks: internal
+          # "alpha" is the API name of the default Closed testing track.
+          # For a custom-named closed track, put its exact name here.
+          tracks: alpha
           status: completed
