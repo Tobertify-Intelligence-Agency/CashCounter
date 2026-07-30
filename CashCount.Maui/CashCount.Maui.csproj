@@ -30,8 +30,8 @@
         <AndroidKeyStore>True</AndroidKeyStore>
         <AndroidSigningKeyStore>..\cashcount.keystore</AndroidSigningKeyStore>
         <AndroidSigningKeyAlias>cashcount</AndroidSigningKeyAlias>
-        <AndroidSigningKeyPass>CashCountLemon3.</AndroidSigningKeyPass>
-        <AndroidSigningStorePass>CashCountLemon3.</AndroidSigningStorePass>
+        <AndroidSigningKeyPass>$(CASHCOUNT_KEYSTORE_PASS)</AndroidSigningKeyPass>
+        <AndroidSigningStorePass>$(CASHCOUNT_KEYSTORE_PASS)</AndroidSigningStorePass>
 
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
@@ -104,7 +104,7 @@
         <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
         <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="10.0.0" />
         <!-- In-App Billing -->
-        <PackageReference Include="Plugin.InAppBilling" Version="8.0.4" />
+        <PackageReference Include="Plugin.InAppBilling" Version="10.0.0" />
     </ItemGroup>
 
     <!-- Firebase packages for Android only (iOS builds happen on Mac) -->
