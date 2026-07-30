@@ -99,17 +99,21 @@ jobs:
             -p:AndroidSigningKeyPass="$CASHCOUNT_KEYSTORE_PASS" \
             -p:AndroidSigningStorePass="$CASHCOUNT_KEYSTORE_PASS"
 
-      - name: Locate AAB
+      - name: Locate signed AAB
         id: aab
         run: |
           set -e
-          found=$(find CashCount.Maui/bin/Release -name '*-Signed.aab' -o -name '*.aab' | head -n1)
+          echo "All .aab files produced:"
+          find CashCount.Maui/bin/Release -name '*.aab' -print
+          # Play requires a signed bundle. .NET Android emits the signed one as
+          # *-Signed.aab next to the unsigned *.aab, so pick the signed one first.
+          found=$(find CashCount.Maui/bin/Release -name '*-Signed.aab' | head -n1)
           if [ -z "$found" ]; then
-            echo "::error::No .aab produced — check the publish step output."
+            echo "::error::No *-Signed.aab found — signing did not run. See the file list above."
             exit 1
           fi
           echo "path=$found" >> "$GITHUB_OUTPUT"
-          echo "Found AAB: $found"
+          echo "Selected signed AAB: $found"
 
       - name: Upload to Play Internal testing
         uses: r0adkll/upload-google-play@v1
