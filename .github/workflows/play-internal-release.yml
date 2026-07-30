@@ -1,0 +1,120 @@
+name: Play Internal Release
+
+# Builds a signed Android App Bundle (API 36 / Android 16) and uploads it to
+# the Google Play "Internal testing" track. Internal testing skips full review,
+# so testers get the update through the Play Store app within minutes.
+#
+# Trigger: push a version tag (e.g. v1.0.6) or run manually (Actions -> Run workflow).
+#
+# Required repository secrets (Settings -> Secrets and variables -> Actions):
+#   ANDROID_KEYSTORE_BASE64     base64 of cashcount.keystore
+#                               (Linux: base64 -w0 cashcount.keystore)
+#   CASHCOUNT_KEYSTORE_PASS     the keystore/key password
+#   PLAY_SERVICE_ACCOUNT_JSON   full JSON of a Google Cloud service account that
+#                               has "Release to testing tracks" access in Play Console
+#
+# Prerequisites (one-time, see setup notes provided separately):
+#   - App com.tobertify.cashcounter already exists on Play (it does: v1.0.5).
+#   - Google Play Android Developer API enabled; service account linked & granted.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release-internal:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install MAUI Android workload
+        run: dotnet workload install maui-android
+
+      - name: Ensure Android SDK Platform 36 is installed
+        run: |
+          set -e
+          yes | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36"
+
+      - name: Validate required secrets
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          CASHCOUNT_KEYSTORE_PASS: ${{ secrets.CASHCOUNT_KEYSTORE_PASS }}
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          missing=""
+          [ -z "$ANDROID_KEYSTORE_BASE64" ] && missing="$missing ANDROID_KEYSTORE_BASE64"
+          [ -z "$CASHCOUNT_KEYSTORE_PASS" ] && missing="$missing CASHCOUNT_KEYSTORE_PASS"
+          [ -z "$PLAY_SERVICE_ACCOUNT_JSON" ] && missing="$missing PLAY_SERVICE_ACCOUNT_JSON"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secret(s):$missing"
+            exit 1
+          fi
+
+      - name: Decode signing keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "${GITHUB_WORKSPACE}/cashcount.keystore"
+
+      - name: Compute versionCode
+        id: version
+        run: |
+          # Play requires a strictly increasing versionCode. The last published
+          # build was 6; add headroom so CI never collides with manual uploads.
+          VERSION_CODE=$((1000 + GITHUB_RUN_NUMBER))
+          echo "code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+          echo "Using versionCode=$VERSION_CODE"
+
+      - name: Publish signed AAB (Release, API 36)
+        env:
+          CASHCOUNT_KEYSTORE_PASS: ${{ secrets.CASHCOUNT_KEYSTORE_PASS }}
+        run: |
+          dotnet publish CashCount.Maui/CashCount.Maui.csproj \
+            -c Release \
+            -f net10.0-android \
+            -p:AndroidPackageFormat=aab \
+            -p:ApplicationVersion=${{ steps.version.outputs.code }} \
+            -p:AndroidKeyStore=true \
+            -p:AndroidSigningKeyStore="${GITHUB_WORKSPACE}/cashcount.keystore" \
+            -p:AndroidSigningKeyAlias=cashcount \
+            -p:AndroidSigningKeyPass="$CASHCOUNT_KEYSTORE_PASS" \
+            -p:AndroidSigningStorePass="$CASHCOUNT_KEYSTORE_PASS"
+
+      - name: Locate AAB
+        id: aab
+        run: |
+          set -e
+          found=$(find CashCount.Maui/bin/Release -name '*-Signed.aab' -o -name '*.aab' | head -n1)
+          if [ -z "$found" ]; then
+            echo "::error::No .aab produced — check the publish step output."
+            exit 1
+          fi
+          echo "path=$found" >> "$GITHUB_OUTPUT"
+          echo "Found AAB: $found"
+
+      - name: Upload to Play Internal testing
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.tobertify.cashcounter
+          releaseFiles: ${{ steps.aab.outputs.path }}
+          tracks: internal
+          status: completed
