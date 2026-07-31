@@ -1,6 +1,6 @@
 namespace CashCount.Shared.Models;
 
-public class TravelCollection
+public class TravelCollection : ISyncable
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
     public string Name { get; set; } = string.Empty;
@@ -8,6 +8,12 @@ public class TravelCollection
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public List<TravelCostEntry> Entries { get; set; } = new();
     public string? LedgerTransactionId { get; set; }
+
+    /// <inheritdoc cref="ISyncable.UpdatedAt" />
+    public DateTime UpdatedAt { get; set; }
+
+    /// <inheritdoc cref="ISyncable.IsDeleted" />
+    public bool IsDeleted { get; set; }
 
     public decimal TotalIncome => Entries.Where(e => e.Type == EntryType.Income).Sum(e => e.Amount);
     public decimal TotalExpenses => Entries.Where(e => e.Type == EntryType.Expense).Sum(e => e.Amount);

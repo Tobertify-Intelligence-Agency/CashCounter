@@ -1,6 +1,6 @@
 namespace CashCount.Shared.Models;
 
-public class SavedCount
+public class SavedCount : ISyncable
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
     public string Name { get; set; } = string.Empty;
@@ -14,6 +14,12 @@ public class SavedCount
     public SavedCountSignature Signature { get; set; } = new();
     public SavedCountSignature SecondSignature { get; set; } = new();
     public string? LedgerTransactionId { get; set; }
+
+    /// <inheritdoc cref="ISyncable.UpdatedAt" />
+    public DateTime UpdatedAt { get; set; }
+
+    /// <inheritdoc cref="ISyncable.IsDeleted" />
+    public bool IsDeleted { get; set; }
 }
 
 public class DenominationCount

@@ -1,0 +1,28 @@
+rules_version = '2';
+
+// CashCounter Firestore security rules.
+//
+// The whole data model lives under users/{userId}. The only rule that really
+// matters is therefore: a signed-in user may touch their own subtree and nothing
+// else. Everything outside users/ is denied, so a future collection is closed by
+// default rather than accidentally world-readable.
+//
+// Deploy with:  firebase deploy --only firestore:rules
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // counts, trips, ledger, accounts, transactions, attachments, savedCounts
+      match /{subcollection}/{documentId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // Anything not matched above is denied.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

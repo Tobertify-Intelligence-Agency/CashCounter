@@ -39,5 +39,12 @@ public enum PremiumFeature
     /// <summary>
     /// Ability to load previously saved counts.
     /// </summary>
-    LoadCounts
+    LoadCounts,
+
+    /// <summary>
+    /// Synchronisation of counts, trips and the account ledger across devices.
+    /// Unlike the entries above — which are currently unlocked for everyone —
+    /// this one is really checked against the user's premium status.
+    /// </summary>
+    CloudSync
 }

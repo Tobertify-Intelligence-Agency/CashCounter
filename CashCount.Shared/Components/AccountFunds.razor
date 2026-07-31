@@ -5,6 +5,7 @@
 @using Microsoft.AspNetCore.Components.Forms
 @inject IStorageService StorageService
 @inject IAppTextService Text
+@inject CashCount.Shared.Services.Sync.ISyncCoordinator Sync
 @implements IDisposable
 
 <div class="account-funds account-funds-minimal">
@@ -370,6 +371,7 @@
     protected override async Task OnInitializedAsync()
     {
         Text.Changed += OnTextChanged;
+        Sync.DataPulled += OnDataPulled;
         _ledger = await StorageService.GetAccountLedgerAsync();
 
         if (!_ledger.Accounts.Any() && !_ledger.Transactions.Any())
@@ -381,6 +383,20 @@
     }
 
     private void OnTextChanged() => InvokeAsync(StateHasChanged);
+
+    /// <summary>
+    /// Another device changed something. Reload — unless a transaction is being
+    /// entered right now, because swapping the ledger underneath an open modal
+    /// would throw away what the user is typing.
+    /// </summary>
+    private void OnDataPulled() => InvokeAsync(async () =>
+    {
+        if (_showTransactionModal)
+            return;
+
+        _ledger = await StorageService.GetAccountLedgerAsync();
+        StateHasChanged();
+    });
 
     private IEnumerable<TrackedAccount> SortedAccounts => _ledger.Accounts
         .OrderByDescending(a => _ledger.GetAccountBalance(a.Id))
@@ -624,5 +640,6 @@
     public void Dispose()
     {
         Text.Changed -= OnTextChanged;
+        Sync.DataPulled -= OnDataPulled;
     }
 }

@@ -19,7 +19,7 @@ public sealed class AppTextService : IAppTextService
         ["en"] = new(StringComparer.OrdinalIgnoreCase)
         {
             ["app.tools"] = "Tools",
-            ["app.version"] = "v1.0.31",
+            ["app.version"] = "v1.0.32",
             ["app.language"] = "Language",
             ["app.languageShort"] = "Lang",
             ["app.currency"] = "Currency",
@@ -155,6 +155,21 @@ public sealed class AppTextService : IAppTextService
             ["account.premium.feature.currency"] = "Currency selection (6 currencies)",
             ["account.premium.feature.save"] = "Save and load cash counts",
             ["account.premium.feature.sync"] = "Sync across devices",
+
+            // Cloud sync
+            ["sync.title"] = "Cloud sync",
+            ["sync.subtitle"] = "Counts, trips and accounts on all your devices.",
+            ["sync.state.unavailable"] = "Not available on this platform",
+            ["sync.state.signedOut"] = "Signed out - data stays on this device",
+            ["sync.state.premiumRequired"] = "Premium required",
+            ["sync.state.ready"] = "Ready",
+            ["sync.state.idle"] = "Synced",
+            ["sync.state.syncing"] = "Syncing...",
+            ["sync.state.error"] = "Last sync failed",
+            ["sync.lastRun"] = "Last sync: {0}",
+            ["sync.never"] = "Not synced yet",
+            ["sync.now"] = "Sync now",
+            ["sync.running"] = "Syncing...",
             ["account.upgradeTitle"] = "Upgrade to Premium",
             ["account.processing"] = "Processing...",
             ["account.upgradeFor"] = "Upgrade for {0}",
@@ -267,7 +282,7 @@ public sealed class AppTextService : IAppTextService
         ["de"] = new(StringComparer.OrdinalIgnoreCase)
         {
             ["app.tools"] = "Tools",
-            ["app.version"] = "v1.0.31",
+            ["app.version"] = "v1.0.32",
             ["app.language"] = "Sprache",
             ["app.languageShort"] = "Sprache",
             ["app.currency"] = "Währung",
@@ -404,6 +419,21 @@ public sealed class AppTextService : IAppTextService
             ["account.premium.feature.currency"] = "Währungsauswahl (6 Währungen)",
             ["account.premium.feature.save"] = "Bargeldzählungen speichern und laden",
             ["account.premium.feature.sync"] = "Geräteübergreifende Synchronisierung",
+
+            // Cloud-Synchronisierung
+            ["sync.title"] = "Cloud-Synchronisierung",
+            ["sync.subtitle"] = "Zählungen, Fahrten und Konten auf allen deinen Geräten.",
+            ["sync.state.unavailable"] = "Auf dieser Plattform nicht verfügbar",
+            ["sync.state.signedOut"] = "Nicht angemeldet - Daten bleiben auf diesem Gerät",
+            ["sync.state.premiumRequired"] = "Premium erforderlich",
+            ["sync.state.ready"] = "Bereit",
+            ["sync.state.idle"] = "Synchronisiert",
+            ["sync.state.syncing"] = "Wird synchronisiert...",
+            ["sync.state.error"] = "Letzte Synchronisierung fehlgeschlagen",
+            ["sync.lastRun"] = "Zuletzt synchronisiert: {0}",
+            ["sync.never"] = "Noch nicht synchronisiert",
+            ["sync.now"] = "Jetzt synchronisieren",
+            ["sync.running"] = "Wird synchronisiert...",
             ["account.upgradeTitle"] = "Auf Premium upgraden",
             ["account.processing"] = "Wird verarbeitet...",
             ["account.upgradeFor"] = "Upgrade für {0}",

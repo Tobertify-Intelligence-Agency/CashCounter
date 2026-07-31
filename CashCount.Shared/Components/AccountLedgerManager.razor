@@ -4,6 +4,7 @@
 @using CashCount.Shared.Services.Localization
 @inject IStorageService StorageService
 @inject IAppTextService Text
+@inject CashCount.Shared.Services.Sync.ISyncCoordinator Sync
 @implements IDisposable
 
 <section class="af-management-shell af-management-shell-minimal">
@@ -125,10 +126,21 @@
     protected override async Task OnInitializedAsync()
     {
         Text.Changed += OnTextChanged;
+        Sync.DataPulled += OnDataPulled;
         _ledger = await StorageService.GetAccountLedgerAsync();
     }
 
     private void OnTextChanged() => InvokeAsync(StateHasChanged);
+
+    /// <summary>Reloads after a sync brought changes down from another device.</summary>
+    private void OnDataPulled() => InvokeAsync(async () =>
+    {
+        if (_showAccountModal)
+            return;
+
+        _ledger = await StorageService.GetAccountLedgerAsync();
+        StateHasChanged();
+    });
 
     private bool CanAddAccount =>
         !string.IsNullOrWhiteSpace(_newAccount.Name) &&
@@ -193,5 +205,6 @@
     public void Dispose()
     {
         Text.Changed -= OnTextChanged;
+        Sync.DataPulled -= OnDataPulled;
     }
 }

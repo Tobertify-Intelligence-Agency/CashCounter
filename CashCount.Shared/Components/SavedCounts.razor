@@ -8,6 +8,8 @@
 @inject SavedCountReceiptService SavedCountReceiptService
 @inject IJSRuntime JSRuntime
 @inject IAppTextService Text
+@inject CashCount.Shared.Services.Sync.ISyncCoordinator Sync
+@implements IDisposable
 
 <div class="saved-counts">
     @if (!_isPremium)
@@ -140,12 +142,31 @@
 
     protected override async Task OnInitializedAsync()
     {
+        Sync.DataPulled += OnDataPulled;
         _isPremium = await PremiumService.IsFeatureEnabledAsync(PremiumFeature.LoadCounts);
         _ledger = await StorageService.GetAccountLedgerAsync();
         if (_isPremium)
             await LoadSavedCounts();
         else
             _isLoading = false;
+    }
+
+    /// <summary>
+    /// A sync brought counts down from another device. Reload — but not while a
+    /// panel is open over a single count, or it would close under the user.
+    /// </summary>
+    private void OnDataPulled() => InvokeAsync(async () =>
+    {
+        if (!_isPremium || _panelCount != null)
+            return;
+
+        await LoadSavedCounts();
+        StateHasChanged();
+    });
+
+    public void Dispose()
+    {
+        Sync.DataPulled -= OnDataPulled;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

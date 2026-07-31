@@ -7,6 +7,8 @@ using CashCount.Shared.Services.Localization;
 using CashCount.Maui.Services.Auth;
 using CashCount.Maui.Services.Billing;
 using CashCount.Maui.Services;
+using CashCount.Maui.Services.Sync;
+using CashCount.Shared.Services.Sync;
 #if ANDROID || IOS
 using Plugin.Firebase.Auth;
 #endif
@@ -39,8 +41,17 @@ public static class MauiProgram
         // Register billing services
         builder.Services.AddScoped<IBillingService, MauiBillingService>();
 
+		// Register cloud sync.
+		//
+		// LocalStorageService stays the real store; SyncingStorageService is the
+		// decorator every component talks to through IStorageService, so no
+		// component had to change.
+		builder.Services.AddScoped<LocalStorageService>();
+		builder.Services.AddScoped<ICloudSyncStore, MauiCloudSyncStore>();
+		builder.Services.AddScoped<ISyncCoordinator, SyncCoordinator>();
+
 		// Register other services
-		builder.Services.AddScoped<IStorageService, LocalStorageService>();
+		builder.Services.AddScoped<IStorageService, SyncingStorageService>();
 		builder.Services.AddScoped<IFileExportService, MauiFileExportService>();
 		builder.Services.AddScoped<ISavedCountPdfService, SavedCountPdfService>();
 		builder.Services.AddScoped<SavedCountExportService>();

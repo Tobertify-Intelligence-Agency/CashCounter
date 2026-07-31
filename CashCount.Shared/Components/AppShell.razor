@@ -1,6 +1,7 @@
 @using Microsoft.AspNetCore.Components.Routing
 @inject NavigationManager NavigationManager
 @inject IAppTextService Text
+@inject CashCount.Shared.Services.Sync.ISyncCoordinator Sync
 @implements IDisposable
 
 <div class="app-shell @(IsMenuOpen ? "menu-open" : "")">
@@ -81,6 +82,10 @@
         if (firstRender)
         {
             await Text.InitializeAsync();
+
+            // Pull whatever the other devices changed while this one was closed.
+            // Debounced and fire-and-forget, so app start is never blocked by it.
+            Sync.RequestSync("app started");
         }
     }
 

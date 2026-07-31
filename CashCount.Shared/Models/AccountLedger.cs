@@ -56,16 +56,22 @@ public class AccountLedger
     }
 }
 
-public class TrackedAccount
+public class TrackedAccount : ISyncable
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
     public string Name { get; set; } = string.Empty;
     public AccountKind Kind { get; set; } = AccountKind.Cash;
     public decimal OpeningBalance { get; set; }
     public string Notes { get; set; } = string.Empty;
+
+    /// <inheritdoc cref="ISyncable.UpdatedAt" />
+    public DateTime UpdatedAt { get; set; }
+
+    /// <inheritdoc cref="ISyncable.IsDeleted" />
+    public bool IsDeleted { get; set; }
 }
 
-public class AccountTransaction
+public class AccountTransaction : ISyncable
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
     public string AccountId { get; set; } = string.Empty;
@@ -78,6 +84,19 @@ public class AccountTransaction
     public string? AttachmentDataUrl { get; set; }
     public string? AttachmentFileName { get; set; }
     public bool HasAttachment => !string.IsNullOrWhiteSpace(AttachmentDataUrl);
+
+    /// <summary>
+    /// Stable identity of the attached picture. Pictures are immutable: replacing
+    /// a picture creates a new id. Cloud sync stores the picture itself under this
+    /// id, so the transaction record stays small.
+    /// </summary>
+    public string? AttachmentId { get; set; }
+
+    /// <inheritdoc cref="ISyncable.UpdatedAt" />
+    public DateTime UpdatedAt { get; set; }
+
+    /// <inheritdoc cref="ISyncable.IsDeleted" />
+    public bool IsDeleted { get; set; }
 }
 
 public class CategorySummary

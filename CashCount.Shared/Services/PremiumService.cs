@@ -79,6 +79,13 @@ public class PremiumService : IPremiumService, IDisposable
 
     public async Task<bool> IsFeatureEnabledAsync(PremiumFeature feature)
     {
+        // Cloud sync is the one feature that is really gated. The three older
+        // features below have been unlocked for everyone for a long time; turning
+        // them off again would take working functionality away from existing
+        // users, which is a product decision of its own and not part of sync.
+        if (feature == PremiumFeature.CloudSync)
+            return await IsPremiumAsync();
+
         var isPremium = true;// await IsPremiumAsync();
 
         // Define which features require premium

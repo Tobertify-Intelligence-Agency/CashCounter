@@ -141,12 +141,61 @@ public class LocalStorageService : IStorageService
     public async Task SaveAccountLedgerAsync(AccountLedger ledger)
     {
         ledger.Touch();
-        var json = JsonSerializer.Serialize(ledger);
-        await _jsRuntime.InvokeVoidAsync("localStorage.setItem", AccountLedgerStorageKey, json);
+        await WriteAccountLedgerAsync(ledger);
     }
 
     public async Task ClearAccountLedgerAsync()
     {
         await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", AccountLedgerStorageKey);
+    }
+
+    // ---------------------------------------------------------------------
+    // Bulk and raw access used by the sync layer.
+    //
+    // These are deliberately NOT on IStorageService: components must keep using
+    // the ordinary, tombstone-filtering API. The sync coordinator needs the
+    // unfiltered lists and must be able to write them back without bumping any
+    // timestamp — writing merged data is not a user edit.
+    // ---------------------------------------------------------------------
+
+    /// <summary>Replaces the whole list of counts, tombstones included.</summary>
+    public async Task ReplaceSavedCountsAsync(List<SavedCount> counts)
+    {
+        var json = JsonSerializer.Serialize(counts);
+        await _jsRuntime.InvokeVoidAsync("localStorage.setItem", StorageKey, json);
+    }
+
+    /// <summary>Replaces the whole list of trips, tombstones included.</summary>
+    public async Task ReplaceSavedTripsAsync(List<TravelCollection> trips)
+    {
+        var json = JsonSerializer.Serialize(trips);
+        await _jsRuntime.InvokeVoidAsync("localStorage.setItem", TripsStorageKey, json);
+    }
+
+    /// <summary>Writes the ledger without touching <see cref="AccountLedger.UpdatedAt"/>.</summary>
+    public async Task WriteAccountLedgerAsync(AccountLedger ledger)
+    {
+        var json = JsonSerializer.Serialize(ledger);
+        await _jsRuntime.InvokeVoidAsync("localStorage.setItem", AccountLedgerStorageKey, json);
+    }
+
+    /// <summary>Reads a raw localStorage value (sync bookkeeping).</summary>
+    public async Task<string?> GetRawAsync(string key)
+    {
+        try
+        {
+            return await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", key);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to read {Key} from localStorage.", key);
+            return null;
+        }
+    }
+
+    /// <summary>Writes a raw localStorage value (sync bookkeeping).</summary>
+    public async Task SetRawAsync(string key, string value)
+    {
+        await _jsRuntime.InvokeVoidAsync("localStorage.setItem", key, value);
     }
 }

@@ -9,6 +9,8 @@ using CashCount.Web.Services.Auth;
 using CashCount.Web.Services.Billing;
 using CashCount.Web.Services;
 using CashCount.Shared.Services.Localization;
+using CashCount.Shared.Services.Sync;
+using CashCount.Web.Services.Sync;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -27,8 +29,17 @@ builder.Services.AddScoped<IUserSyncService, WebUserSyncService>();
 // Register billing services
 builder.Services.AddScoped<IBillingService, WebBillingService>();
 
+// Register cloud sync.
+//
+// The order matters conceptually, not technically: LocalStorageService is the
+// real store, SyncingStorageService is the decorator every component talks to.
+// Components keep injecting IStorageService and notice nothing.
+builder.Services.AddScoped<LocalStorageService>();
+builder.Services.AddScoped<ICloudSyncStore, WebCloudSyncStore>();
+builder.Services.AddScoped<ISyncCoordinator, SyncCoordinator>();
+
 // Register other services
-builder.Services.AddScoped<IStorageService, LocalStorageService>();
+builder.Services.AddScoped<IStorageService, SyncingStorageService>();
 builder.Services.AddScoped<IFileExportService, WebFileExportService>();
 builder.Services.AddScoped<ISavedCountPdfService, SavedCountPdfService>();
 builder.Services.AddScoped<SavedCountExportService>();

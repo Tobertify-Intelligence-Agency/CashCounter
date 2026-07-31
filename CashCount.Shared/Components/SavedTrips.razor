@@ -3,6 +3,8 @@
 @inject IStorageService StorageService
 @inject IPremiumService PremiumService
 @inject NavigationManager NavigationManager
+@inject CashCount.Shared.Services.Sync.ISyncCoordinator Sync
+@implements IDisposable
 
 <div class="saved-counts">
     @if (!_isPremium)
@@ -98,11 +100,27 @@
 
     protected override async Task OnInitializedAsync()
     {
+        Sync.DataPulled += OnDataPulled;
         _isPremium = await PremiumService.IsFeatureEnabledAsync(PremiumFeature.LoadCounts);
         if (_isPremium)
             await LoadSavedTrips();
         else
             _isLoading = false;
+    }
+
+    /// <summary>Reloads after a sync brought trips down from another device.</summary>
+    private void OnDataPulled() => InvokeAsync(async () =>
+    {
+        if (!_isPremium)
+            return;
+
+        await LoadSavedTrips();
+        StateHasChanged();
+    });
+
+    public void Dispose()
+    {
+        Sync.DataPulled -= OnDataPulled;
     }
 
     private async Task LoadSavedTrips()

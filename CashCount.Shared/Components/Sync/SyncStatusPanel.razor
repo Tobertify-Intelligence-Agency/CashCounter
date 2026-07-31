@@ -1,0 +1,89 @@
+@using CashCount.Shared.Services.Localization
+@using CashCount.Shared.Services.Sync
+@inject ISyncCoordinator Sync
+@inject IAppTextService Text
+@implements IDisposable
+
+<div class="sync-section">
+    <div class="af-panel-header af-panel-header-minimalized">
+        <div>
+            <h3>@Text["sync.title"]</h3>
+            <p>@Text["sync.subtitle"]</p>
+        </div>
+    </div>
+
+    <div class="sync-status sync-status-@StatusClass">
+        <span class="sync-status-dot"></span>
+        <div class="sync-status-text">
+            <strong>@StatusLabel</strong>
+            @if (Sync.State == SyncState.Error && !string.IsNullOrWhiteSpace(Sync.LastError))
+            {
+                <span class="sync-status-detail sync-status-error">@Sync.LastError</span>
+            }
+            else if (Sync.LastSyncedAt.HasValue)
+            {
+                <span class="sync-status-detail">
+                    @Text.Format("sync.lastRun", Sync.LastSyncedAt.Value.ToLocalTime().ToString("g", Text.CurrentCulture))
+                </span>
+            }
+            else
+            {
+                <span class="sync-status-detail">@Text["sync.never"]</span>
+            }
+        </div>
+    </div>
+
+    @if (CanSyncManually)
+    {
+        <button class="btn-secondary sync-now-button" @onclick="SyncNowAsync" disabled="@(Sync.State == SyncState.Syncing)">
+            @(Sync.State == SyncState.Syncing ? Text["sync.running"] : Text["sync.now"])
+        </button>
+    }
+</div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        Sync.Changed += OnSyncChanged;
+        Text.Changed += OnTextChanged;
+
+        await Sync.EnsureLastSyncLoadedAsync();
+    }
+
+    private bool CanSyncManually => Sync.State is SyncState.Idle or SyncState.Syncing or SyncState.Error;
+
+    private string StatusClass => Sync.State switch
+    {
+        SyncState.Idle => Sync.LastSyncedAt.HasValue ? "ok" : "off",
+        SyncState.Syncing => "busy",
+        SyncState.Error => "error",
+        _ => "off"
+    };
+
+    private string StatusLabel => Sync.State switch
+    {
+        SyncState.Unavailable => Text["sync.state.unavailable"],
+        SyncState.SignedOut => Text["sync.state.signedOut"],
+        SyncState.PremiumRequired => Text["sync.state.premiumRequired"],
+        SyncState.Syncing => Text["sync.state.syncing"],
+        SyncState.Error => Text["sync.state.error"],
+        // "Synced" would be a lie before the first run has ever happened.
+        _ => Sync.LastSyncedAt.HasValue ? Text["sync.state.idle"] : Text["sync.state.ready"]
+    };
+
+    private async Task SyncNowAsync()
+    {
+        await Sync.SyncNowAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void OnSyncChanged() => InvokeAsync(StateHasChanged);
+
+    private void OnTextChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Sync.Changed -= OnSyncChanged;
+        Text.Changed -= OnTextChanged;
+    }
+}
